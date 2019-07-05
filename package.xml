@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>xsens_mtw_driver</name>
+  <version>0.1.0</version>
+  <description>xsens_awinda_driver package</description>
+  <maintainer email="mattia.guidolin@phd.unipd.it">Mattia Guidolin</maintainer>
+  <maintainer email="luca.tagliapietra@unipd.it">Luca Tagliapietra</maintainer>
+  <license>TODO</license>
+
+  <url type="website">TODO</url>
+  <author email="mattia.guidolin@phd.unipd.it">Mattia Guidolin</author>
+  <author email="luca.tagliapietra@unipd.it">Luca Tagliapietra</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>roscpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+</package>
