@@ -322,11 +322,11 @@ bool mtw::XsensMtw::wait_mtw_connection() // TODO: fix dirty waiting
   m_number_of_connected_mtws = m_wireless_master_callback.getWirelessMTWs().size();
 
   int cnt1 = 50;
-  int cnt2 = 50;
   do {
     --cnt1;
     XsTime::msleep(100);
 
+    int cnt2 = 100;
     while (cnt2 > 0) {
       --cnt2;
       size_t nextCount = m_wireless_master_callback.getWirelessMTWs().size();
