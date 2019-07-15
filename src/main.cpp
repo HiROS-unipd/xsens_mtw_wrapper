@@ -6,7 +6,7 @@
 
 int main(int argc, char* argv[])
 {
-  std::string node_name = "xsens_awinda_driver";
+  std::string node_name = "xsens_mtw_driver";
   ros::init(argc, argv, node_name);
 
   mtw::XsensMtw xsens_mtw;

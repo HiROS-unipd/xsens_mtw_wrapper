@@ -1,3 +1,3 @@
-# xsens_awinda_driver
+# xsens_mtw_driver
 
 TODO

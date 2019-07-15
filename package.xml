@@ -2,7 +2,7 @@
 <package format="2">
   <name>xsens_mtw_driver</name>
   <version>0.1.0</version>
-  <description>xsens_awinda_driver package</description>
+  <description>xsens_mtw_driver package</description>
   <maintainer email="mattia.guidolin@phd.unipd.it">Mattia Guidolin</maintainer>
   <maintainer email="luca.tagliapietra@unipd.it">Luca Tagliapietra</maintainer>
   <license>TODO</license>
