@@ -6,16 +6,18 @@
 
 #include "xsensdeviceapi.h"
 
-namespace mtw {
-  namespace utils {
+namespace xsens {
+  namespace mtw {
+    namespace utils {
 
-    typedef std::set<XsDevice*> XsDeviceSet;
+      typedef std::set<XsDevice*> XsDeviceSet;
 
-    std::ostream& operator<<(std::ostream& out, const XsPortInfo& p);
+      std::ostream& operator<<(std::ostream& out, const XsPortInfo& p);
 
-    std::ostream& operator<<(std::ostream& out, const XsDevice& d);
+      std::ostream& operator<<(std::ostream& out, const XsDevice& d);
 
-  } // namespace utils
-} // namespace mtw
+    } // namespace utils
+  } // namespace mtw
+} // namespace xsens
 
 #endif

@@ -5,24 +5,26 @@
 
 #include "xsens_mtw/utils.h"
 
-namespace mtw {
+namespace xsens {
+  namespace mtw {
 
-  //----------------------------------------------------------------------
-  // Callback handler for wireless master
-  //----------------------------------------------------------------------
-  class WirelessMasterCallback : public XsCallback
-  {
-  public:
-    utils::XsDeviceSet getWirelessMTWs() const;
+    //----------------------------------------------------------------------
+    // Callback handler for wireless master
+    //----------------------------------------------------------------------
+    class WirelessMasterCallback : public XsCallback
+    {
+    public:
+      utils::XsDeviceSet getWirelessMTWs() const;
 
-  protected:
-    virtual void onConnectivityChanged(XsDevice* dev, XsConnectivityState newState);
+    protected:
+      virtual void onConnectivityChanged(XsDevice* dev, XsConnectivityState newState);
 
-  private:
-    mutable XsMutex m_mutex;
-    utils::XsDeviceSet m_connectedMTWs;
-  };
+    private:
+      mutable XsMutex m_mutex;
+      utils::XsDeviceSet m_connectedMTWs;
+    };
 
-} // namespace mtw
+  } // namespace mtw
+} // namespace xsens
 
 #endif

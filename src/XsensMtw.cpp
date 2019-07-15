@@ -1,6 +1,6 @@
 #include "xsens_mtw/XsensMtw.h"
 
-mtw::XsensMtw::XsensMtw(int t_desired_update_rate, int t_desired_radio_channel)
+xsens::mtw::XsensMtw::XsensMtw(int t_desired_update_rate, int t_desired_radio_channel)
   : m_desired_update_rate(t_desired_update_rate)
   , m_desired_radio_channel(t_desired_radio_channel)
   , m_number_of_connected_mtws(0)
@@ -9,7 +9,7 @@ mtw::XsensMtw::XsensMtw(int t_desired_update_rate, int t_desired_radio_channel)
   , m_xsens_mtw_configured(false)
 {}
 
-void mtw::XsensMtw::start()
+void xsens::mtw::XsensMtw::start()
 {
   ROS_INFO_STREAM("XsensMtw... Starting");
 
@@ -43,7 +43,7 @@ void mtw::XsensMtw::start()
   ROS_INFO_STREAM("XsensMtw... RUNNING");
 }
 
-void mtw::XsensMtw::run()
+void xsens::mtw::XsensMtw::run()
 {
   std::cout << "\nMain loop. Press ctrl+c to quit\n" << std::endl;
 
@@ -106,7 +106,7 @@ void mtw::XsensMtw::run()
   stop();
 }
 
-void mtw::XsensMtw::stop()
+void xsens::mtw::XsensMtw::stop()
 {
   ROS_INFO_STREAM("XsensMtw... Stopping");
 
@@ -131,7 +131,7 @@ void mtw::XsensMtw::stop()
   std::cout << "Successful exit" << std::endl;
 }
 
-bool mtw::XsensMtw::configure()
+bool xsens::mtw::XsensMtw::configure()
 {
   if (!construct_control()) {
     return false;
@@ -171,7 +171,7 @@ bool mtw::XsensMtw::configure()
   return m_xsens_mtw_configured;
 }
 
-bool mtw::XsensMtw::construct_control()
+bool xsens::mtw::XsensMtw::construct_control()
 {
   std::cout << "Constructing XsControl..." << std::endl;
 
@@ -185,7 +185,7 @@ bool mtw::XsensMtw::construct_control()
   return true;
 }
 
-bool mtw::XsensMtw::find_wireless_master()
+bool xsens::mtw::XsensMtw::find_wireless_master()
 {
   std::cout << "Scanning ports..." << std::endl;
   m_detected_devices = XsScanner::scanPorts();
@@ -205,7 +205,7 @@ bool mtw::XsensMtw::find_wireless_master()
   return true;
 }
 
-bool mtw::XsensMtw::open_port()
+bool xsens::mtw::XsensMtw::open_port()
 {
   std::cout << "Opening port..." << std::endl;
   if (!m_control->openPort(m_wireless_master_port->portName().toStdString(), m_wireless_master_port->baudrate())) {
@@ -216,7 +216,7 @@ bool mtw::XsensMtw::open_port()
   return true;
 }
 
-bool mtw::XsensMtw::get_xsdevice_instance()
+bool xsens::mtw::XsensMtw::get_xsdevice_instance()
 {
   std::cout << "Getting XsDevice instance for wireless master..." << std::endl;
   m_wireless_master_device = m_control->device(m_wireless_master_port->deviceId());
@@ -229,7 +229,7 @@ bool mtw::XsensMtw::get_xsdevice_instance()
   return true;
 }
 
-bool mtw::XsensMtw::set_config_mode()
+bool xsens::mtw::XsensMtw::set_config_mode()
 {
   std::cout << "Setting config mode..." << std::endl;
   if (!m_wireless_master_device->gotoConfig()) {
@@ -240,13 +240,13 @@ bool mtw::XsensMtw::set_config_mode()
   return true;
 }
 
-void mtw::XsensMtw::attach_callback_handler()
+void xsens::mtw::XsensMtw::attach_callback_handler()
 {
   std::cout << "Attaching callback handler..." << std::endl;
   m_wireless_master_device->addCallbackHandler(&m_wireless_master_callback);
 }
 
-bool mtw::XsensMtw::get_closest_update_rate()
+bool xsens::mtw::XsensMtw::get_closest_update_rate()
 {
   std::cout << "Getting the list of the supported update rates..." << std::endl;
   const XsIntArray supportedUpdateRates = m_wireless_master_device->supportedUpdateRates();
@@ -285,7 +285,7 @@ bool mtw::XsensMtw::get_closest_update_rate()
   return true;
 }
 
-bool mtw::XsensMtw::set_update_rate()
+bool xsens::mtw::XsensMtw::set_update_rate()
 {
   std::cout << "Setting update rate to " << m_update_rate << " Hz..." << std::endl;
   if (!m_wireless_master_device->setUpdateRate(m_update_rate)) {
@@ -296,7 +296,7 @@ bool mtw::XsensMtw::set_update_rate()
   return true;
 }
 
-bool mtw::XsensMtw::set_radio_channel()
+bool xsens::mtw::XsensMtw::set_radio_channel()
 {
   std::cout << "Disabling radio channel if previously enabled..." << std::endl;
   if (m_wireless_master_device->isRadioEnabled()) {
@@ -315,7 +315,7 @@ bool mtw::XsensMtw::set_radio_channel()
   return true;
 }
 
-bool mtw::XsensMtw::wait_mtw_connection() // TODO: fix dirty waiting
+bool xsens::mtw::XsensMtw::wait_mtw_connection() // TODO: fix dirty waiting
 {
   std::cout << "Waiting for MTW to wirelessly connect...\n" << std::endl;
 
@@ -343,7 +343,7 @@ bool mtw::XsensMtw::wait_mtw_connection() // TODO: fix dirty waiting
   return (m_number_of_connected_mtws != 0);
 }
 
-bool mtw::XsensMtw::start_measurement()
+bool xsens::mtw::XsensMtw::start_measurement()
 {
   std::cout << "Starting measurement..." << std::endl;
   if (!m_wireless_master_device->gotoMeasurement()) {
@@ -354,7 +354,7 @@ bool mtw::XsensMtw::start_measurement()
   return true;
 }
 
-bool mtw::XsensMtw::get_mtws_device_istances()
+bool xsens::mtw::XsensMtw::get_mtws_device_istances()
 {
   std::cout << "Getting XsDevice instances for all MTWs..." << std::endl;
   m_all_device_ids = m_control->deviceIds();
@@ -379,7 +379,7 @@ bool mtw::XsensMtw::get_mtws_device_istances()
   return true;
 }
 
-void mtw::XsensMtw::attach_callback_handlers()
+void xsens::mtw::XsensMtw::attach_callback_handlers()
 {
   std::cout << "Attaching callback handlers to MTWs..." << std::endl;
   m_mtw_callbacks.resize(m_mtw_devices.size());
@@ -390,13 +390,13 @@ void mtw::XsensMtw::attach_callback_handlers()
   }
 }
 
-void mtw::XsensMtw::setup_ros_topics() // TODO: fix for multiple imus
+void xsens::mtw::XsensMtw::setup_ros_topics() // TODO: fix for multiple imus
 {
   m_imu_pub = m_nh.advertise<sensor_msgs::Imu>("/imu/data_raw", 1000);
   m_mag_pub = m_nh.advertise<sensor_msgs::MagneticField>("/imu/mag", 1000);
 }
 
-bool mtw::XsensMtw::disable_radio()
+bool xsens::mtw::XsensMtw::disable_radio()
 {
   std::cout << "Disabling radio... " << std::endl;
 

@@ -9,7 +9,7 @@ int main(int argc, char* argv[])
   std::string node_name = "xsens_mtw_driver";
   ros::init(argc, argv, node_name);
 
-  mtw::XsensMtw xsens_mtw;
+  xsens::mtw::XsensMtw xsens_mtw;
   xsens_mtw.start();
   xsens_mtw.run();
 

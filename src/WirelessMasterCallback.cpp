@@ -1,12 +1,12 @@
 #include "xsens_mtw/WirelessMasterCallback.h"
 
-mtw::utils::XsDeviceSet mtw::WirelessMasterCallback::getWirelessMTWs() const
+xsens::mtw::utils::XsDeviceSet xsens::mtw::WirelessMasterCallback::getWirelessMTWs() const
 {
   XsMutexLocker lock(m_mutex);
   return m_connectedMTWs;
 }
 
-void mtw::WirelessMasterCallback::onConnectivityChanged(XsDevice* dev, XsConnectivityState newState)
+void xsens::mtw::WirelessMasterCallback::onConnectivityChanged(XsDevice* dev, XsConnectivityState newState)
 {
   XsMutexLocker lock(m_mutex);
   switch (newState) {
