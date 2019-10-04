@@ -1,23 +1,26 @@
-#ifndef xsens_mtw_driver_utils_h
-#define xsens_mtw_driver_utils_h
+#ifndef hiros_xsens_mtw_utils_h
+#define hiros_xsens_mtw_utils_h
 
-#include <iostream>
+// Standard dependencies
 #include <set>
 
+// Xsens dependencies
 #include "xsensdeviceapi.h"
 
-namespace xsens {
-  namespace mtw {
+namespace hiros {
+  namespace xsens_mtw {
     namespace utils {
 
       typedef std::set<XsDevice*> XsDeviceSet;
 
-      std::ostream& operator<<(std::ostream& out, const XsPortInfo& p);
+      std::ostream& operator<<(std::ostream& t_out, const XsPortInfo& t_p);
+      std::ostream& operator<<(std::ostream& t_out, const XsDevice& t_d);
 
-      std::ostream& operator<<(std::ostream& out, const XsDevice& d);
+      std::string toString(const XsPortInfo& t_p);
+      std::string toString(const XsDevice& t_d);
 
     } // namespace utils
-  } // namespace mtw
-} // namespace xsens
+  } // namespace xsens_mtw
+} // namespace hiros
 
 #endif

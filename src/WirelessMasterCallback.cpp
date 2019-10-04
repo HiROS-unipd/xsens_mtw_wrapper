@@ -1,43 +1,48 @@
+// Standard dependencies
+#include <iostream>
+
+// Internal dependencies
 #include "xsens_mtw/WirelessMasterCallback.h"
 
-xsens::mtw::utils::XsDeviceSet xsens::mtw::WirelessMasterCallback::getWirelessMTWs() const
+hiros::xsens_mtw::utils::XsDeviceSet hiros::xsens_mtw::WirelessMasterCallback::getWirelessMTWs() const
 {
   XsMutexLocker lock(m_mutex);
-  return m_connectedMTWs;
+  return m_connected_mtws;
 }
 
-void xsens::mtw::WirelessMasterCallback::onConnectivityChanged(XsDevice* dev, XsConnectivityState newState)
+void hiros::xsens_mtw::WirelessMasterCallback::onConnectivityChanged(XsDevice* t_device,
+                                                                     XsConnectivityState t_new_state)
 {
   XsMutexLocker lock(m_mutex);
-  switch (newState) {
+  switch (t_new_state) {
     case XCS_Disconnected: /*!< Device has disconnected, only limited informational functionality is available. */
-      mtw::utils::operator<<(std::cout << "EVENT: MTW Disconnected -> ", *dev) << std::endl;
-      m_connectedMTWs.erase(dev);
+      utils::operator<<(std::cout << "EVENT: MTW Disconnected -> ", *t_device) << std::endl;
+      m_connected_mtws.erase(t_device);
       break;
     case XCS_Rejected: /*!< Device has been rejected and is disconnected, only limited informational functionality is
                           available. */
-      mtw::utils::operator<<(std::cout << "EVENT: MTW Rejected -> ", *dev) << std::endl;
-      m_connectedMTWs.erase(dev);
+      utils::operator<<(std::cout << "EVENT: MTW Rejected -> ", *t_device) << std::endl;
+      m_connected_mtws.erase(t_device);
       break;
     case XCS_PluggedIn: /*!< Device is connected through a cable. */
-      mtw::utils::operator<<(std::cout << "EVENT: MTW PluggedIn -> ", *dev) << std::endl;
-      m_connectedMTWs.erase(dev);
+      utils::operator<<(std::cout << "EVENT: MTW PluggedIn -> ", *t_device) << std::endl;
+      m_connected_mtws.erase(t_device);
       break;
     case XCS_Wireless: /*!< Device is connected wirelessly. */
-      mtw::utils::operator<<(std::cout << "EVENT: MTW Connected -> ", *dev) << std::endl;
-      m_connectedMTWs.insert(dev);
+      utils::operator<<(std::cout << "EVENT: MTW Connected -> ", *t_device) << std::endl;
+      m_connected_mtws.insert(t_device);
       break;
     case XCS_File: /*!< Device is reading from a file. */
-      mtw::utils::operator<<(std::cout << "EVENT: MTW File -> ", *dev) << std::endl;
-      m_connectedMTWs.erase(dev);
+      utils::operator<<(std::cout << "EVENT: MTW File -> ", *t_device) << std::endl;
+      m_connected_mtws.erase(t_device);
       break;
     case XCS_Unknown: /*!< Device is in an unknown state. */
-      mtw::utils::operator<<(std::cout << "EVENT: MTW Unknown -> ", *dev) << std::endl;
-      m_connectedMTWs.erase(dev);
+      utils::operator<<(std::cout << "EVENT: MTW Unknown -> ", *t_device) << std::endl;
+      m_connected_mtws.erase(t_device);
       break;
     default:
-      mtw::utils::operator<<(std::cout << "EVENT: MTW Error -> ", *dev) << std::endl;
-      m_connectedMTWs.erase(dev);
+      utils::operator<<(std::cout << "EVENT: MTW Error -> ", *t_device) << std::endl;
+      m_connected_mtws.erase(t_device);
       break;
   }
 }

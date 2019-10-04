@@ -1,12 +1,14 @@
-#ifndef xsens_mtw_driver_MtwCallback_h
-#define xsens_mtw_driver_MtwCallback_h
+#ifndef hiros_xsens_mtw_mtwCallback_h
+#define hiros_xsens_mtw_mtwCallback_h
 
+// Standard dependencies
 #include <list>
 
+// Xsens dependencies
 #include "xsensdeviceapi.h"
 
-namespace xsens {
-  namespace mtw {
+namespace hiros {
+  namespace xsens_mtw {
 
     //----------------------------------------------------------------------
     // Callback handler for MTw
@@ -15,7 +17,7 @@ namespace xsens {
     class MtwCallback : public XsCallback
     {
     public:
-      MtwCallback(int mtwIndex, XsDevice* device);
+      MtwCallback(int t_mtw_index, XsDevice* t_device);
 
       bool dataAvailable() const;
 
@@ -23,21 +25,21 @@ namespace xsens {
 
       void deleteOldestPacket();
 
-      inline int getMtwIndex() const { return m_mtwIndex; }
+      inline int getMtwIndex() const { return m_mtw_index; }
 
       XsDevice const& device() const;
 
     protected:
-      virtual void onLiveDataAvailable(XsDevice*, const XsDataPacket* packet);
+      virtual void onLiveDataAvailable(XsDevice* t_device, const XsDataPacket* t_packet);
 
     private:
       mutable XsMutex m_mutex;
-      std::list<XsDataPacket> m_packetBuffer;
-      int m_mtwIndex;
+      std::list<XsDataPacket> m_packet_buffer;
+      int m_mtw_index;
       XsDevice* m_device;
     };
 
-  } // namespace mtw
-} // namespace xsens
+  } // namespace xsens_mtw
+} // namespace hiros
 
 #endif

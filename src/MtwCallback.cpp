@@ -1,45 +1,41 @@
-#include <iostream>
-
+// Internal dependencies
 #include "xsens_mtw/MtwCallback.h"
 
-xsens::mtw::MtwCallback::MtwCallback(int mtwIndex, XsDevice* device)
-  : m_mtwIndex(mtwIndex)
-  , m_device(device)
+hiros::xsens_mtw::MtwCallback::MtwCallback(int t_mtw_index, XsDevice* t_device)
+  : m_mtw_index(t_mtw_index)
+  , m_device(t_device)
 {}
 
-bool xsens::mtw::MtwCallback::dataAvailable() const
+bool hiros::xsens_mtw::MtwCallback::dataAvailable() const
 {
   XsMutexLocker lock(m_mutex);
-  return !m_packetBuffer.empty();
+  return !m_packet_buffer.empty();
 }
 
-XsDataPacket const* xsens::mtw::MtwCallback::getOldestPacket() const
+XsDataPacket const* hiros::xsens_mtw::MtwCallback::getOldestPacket() const
 {
   XsMutexLocker lock(m_mutex);
-  XsDataPacket const* packet = &m_packetBuffer.front();
+  XsDataPacket const* packet = &m_packet_buffer.front();
   return packet;
 }
 
-void xsens::mtw::MtwCallback::deleteOldestPacket()
+void hiros::xsens_mtw::MtwCallback::deleteOldestPacket()
 {
   XsMutexLocker lock(m_mutex);
-  m_packetBuffer.pop_front();
+  m_packet_buffer.pop_front();
 }
 
-XsDevice const& xsens::mtw::MtwCallback::device() const
+XsDevice const& hiros::xsens_mtw::MtwCallback::device() const
 {
   assert(m_device != 0);
   return *m_device;
 }
 
-void xsens::mtw::MtwCallback::onLiveDataAvailable(XsDevice*, const XsDataPacket* packet)
+void hiros::xsens_mtw::MtwCallback::onLiveDataAvailable(XsDevice* t_device, const XsDataPacket* packet)
 {
   XsMutexLocker lock(m_mutex);
-  // NOTE: Processing of packets should not be done in this thread.
-
-  m_packetBuffer.push_back(*packet);
-  if (m_packetBuffer.size() > 300) {
-    std::cout << std::endl;
+  m_packet_buffer.push_back(*packet);
+  if (m_packet_buffer.size() > 300) {
     deleteOldestPacket();
   }
 }
