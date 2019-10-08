@@ -55,11 +55,14 @@ namespace hiros {
       void run();
 
     private:
-      void stop();
       bool configure();
+      void stop();
 
       void configureWrapper();
       bool configureXsensMtw();
+
+      void stopXsensMtw();
+      void stopWrapper();
 
       bool waitMtwConnection();
       bool getMtwsDeviceIstances();

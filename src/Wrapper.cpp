@@ -19,28 +19,42 @@ void hiros::xsens_mtw::Wrapper::start()
 {
   ROS_INFO_STREAM("Xsens Mtw Wrapper... Starting");
 
-  if (!m_xsens_mtw_configured) {
-    if (!configure()) {
+  do {
+    if (!m_xsens_mtw_configured) {
+      if (!configure()) {
+        ros::shutdown();
+      }
+    }
+    else {
+      ROS_WARN_STREAM("Xsens Mtw Wrapper... Trying to reduce the update rate");
+
+      stopXsensMtw();
+
+      unsigned long up_rate_index = static_cast<unsigned long>(m_supported_update_rates.find(m_update_rate));
+
+      if (up_rate_index == m_supported_update_rates.size() - 1) {
+        ROS_FATAL_STREAM("Xsens Mtw Wrapper... Failed to go to measurement mode");
+        ros::shutdown();
+      }
+
+      m_mtw_params.desired_update_rate = m_supported_update_rates.at(++up_rate_index);
+
+      configureXsensMtw();
+    }
+
+    if (!waitMtwConnection()) {
       ros::shutdown();
     }
-  }
 
-  if (!waitMtwConnection()) {
-    ros::shutdown();
-  }
+    if (!getMtwsDeviceIstances()) {
+      ros::shutdown();
+    }
 
-  if (!getMtwsDeviceIstances()) {
-    ros::shutdown();
-  }
+    attachCallbackHandlers();
+  } while (!startMeasurement());
 
   setupRosTopics();
   initializeVectors();
-
-  attachCallbackHandlers();
-
-  if (!startMeasurement()) {
-    ros::shutdown();
-  }
 }
 
 void hiros::xsens_mtw::Wrapper::run()
@@ -98,10 +112,104 @@ void hiros::xsens_mtw::Wrapper::run()
   stop();
 }
 
+bool hiros::xsens_mtw::Wrapper::configure()
+{
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Configuring");
+
+  if (m_xsens_mtw_configured) {
+    m_xsens_mtw_configured = false;
+    stop();
+  }
+
+  configureWrapper();
+  bool success = configureXsensMtw();
+
+  m_xsens_mtw_configured = true;
+
+  if (success) {
+    ROS_DEBUG_STREAM("Xsens Mtw Wrapper... CONFIGURED");
+  }
+
+  return success;
+}
+
 void hiros::xsens_mtw::Wrapper::stop()
 {
   ROS_INFO_STREAM("Xsens Mtw Wrapper... Stopping");
 
+  stopXsensMtw();
+  stopWrapper();
+
+  ROS_INFO_STREAM(BASH_MSG_GREEN << "Xsens Mtw Wrapper... STOPPED" << BASH_MSG_RESET);
+
+  ros::shutdown();
+}
+
+void hiros::xsens_mtw::Wrapper::configureWrapper()
+{
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Configuring Wrapper");
+
+  m_nh.getParam("desired_update_rate", m_mtw_params.desired_update_rate);
+  m_nh.getParam("desired_radio_channel", m_mtw_params.desired_radio_channel);
+
+  m_nh.getParam("enable_custom_labeling", m_wrapper_params.enable_custom_labeling);
+
+  m_nh.getParam("publish_imu", m_wrapper_params.publish_imu);
+  m_nh.getParam("publish_acceleration", m_wrapper_params.publish_acceleration);
+  m_nh.getParam("publish_angular_velocity", m_wrapper_params.publish_angular_velocity);
+  m_nh.getParam("publish_mag", m_wrapper_params.publish_mag);
+  m_nh.getParam("publish_euler", m_wrapper_params.publish_euler);
+  m_nh.getParam("publish_quaternion", m_wrapper_params.publish_quaternion);
+  m_nh.getParam("publish_free_acceleration", m_wrapper_params.publish_free_acceleration);
+  m_nh.getParam("publish_pressure", m_wrapper_params.publish_pressure);
+  m_nh.getParam("publish_tf", m_wrapper_params.publish_tf);
+
+  bool nothing_to_publish =
+    (!m_wrapper_params.publish_imu && !m_wrapper_params.publish_acceleration
+     && !m_wrapper_params.publish_angular_velocity && !m_wrapper_params.publish_mag && !m_wrapper_params.publish_euler
+     && !m_wrapper_params.publish_quaternion && !m_wrapper_params.publish_free_acceleration
+     && !m_wrapper_params.publish_pressure && !m_wrapper_params.publish_tf);
+
+  if (nothing_to_publish) {
+    ROS_FATAL_STREAM("Xsens Mtw Wrapper... Nothing to publish. Closing");
+    ros::shutdown();
+  }
+
+  if (m_wrapper_params.enable_custom_labeling) {
+    XmlRpc::XmlRpcValue xml_sensor_labels;
+    if (m_nh.getParam("sensor_labels", xml_sensor_labels)) {
+
+      for (int i = 0; i < xml_sensor_labels.size(); ++i) {
+        m_ids_to_labels.emplace(xml_sensor_labels[i]["imu_id"], xml_sensor_labels[i]["label"]);
+      }
+    }
+  }
+}
+
+bool hiros::xsens_mtw::Wrapper::configureXsensMtw()
+{
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Configuring Xsens Mtw");
+
+  bool success = constructControl();
+  success = success && findWirelessMaster();
+  success = success && openPort();
+  success = success && getXsdeviceInstance();
+  success = success && setConfigMode();
+  attachCallbackHandler();
+  success = success && getClosestUpdateRate();
+  success = success && setUpdateRate();
+  success = success && setRadioChannel();
+
+  if (!success) {
+    ROS_FATAL_STREAM("Xsens Mtw Wrapper... Failed to configure Xsens Mtw");
+    return false;
+  }
+
+  return true;
+}
+
+void hiros::xsens_mtw::Wrapper::stopXsensMtw()
+{
   if (!setConfigMode()) {
     ros::shutdown();
   }
@@ -117,7 +225,15 @@ void hiros::xsens_mtw::Wrapper::stop()
   for (auto& mtw_callback : m_mtw_callbacks) {
     delete (mtw_callback);
   }
+  m_mtw_callbacks.clear();
 
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Clearing MTW devices");
+  m_mtw_devices.clear();
+  m_mtw_device_ids.clear();
+}
+
+void hiros::xsens_mtw::Wrapper::stopWrapper()
+{
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Shutting down ROS publishers");
 
   if (m_wrapper_params.publish_imu) {
@@ -183,94 +299,6 @@ void hiros::xsens_mtw::Wrapper::stop()
       }
     }
   }
-
-  ROS_INFO_STREAM(BASH_MSG_GREEN << "Xsens Mtw Wrapper... STOPPED" << BASH_MSG_RESET);
-
-  ros::shutdown();
-}
-
-bool hiros::xsens_mtw::Wrapper::configure()
-{
-  ROS_INFO_STREAM("Xsens Mtw Wrapper... Configuring");
-
-  if (m_xsens_mtw_configured) {
-    m_xsens_mtw_configured = false;
-    stop();
-  }
-
-  configureWrapper();
-  bool success = configureXsensMtw();
-
-  m_xsens_mtw_configured = true;
-
-  if (success) {
-    ROS_INFO_STREAM("Xsens Mtw Wrapper... CONFIGURED");
-  }
-
-  return success;
-}
-
-void hiros::xsens_mtw::Wrapper::configureWrapper()
-{
-  ROS_INFO_STREAM("Xsens Mtw Wrapper... Configuring Wrapper");
-
-  m_nh.getParam("desired_update_rate", m_mtw_params.desired_update_rate);
-  m_nh.getParam("desired_radio_channel", m_mtw_params.desired_radio_channel);
-
-  m_nh.getParam("enable_custom_labeling", m_wrapper_params.enable_custom_labeling);
-
-  m_nh.getParam("publish_imu", m_wrapper_params.publish_imu);
-  m_nh.getParam("publish_acceleration", m_wrapper_params.publish_acceleration);
-  m_nh.getParam("publish_angular_velocity", m_wrapper_params.publish_angular_velocity);
-  m_nh.getParam("publish_mag", m_wrapper_params.publish_mag);
-  m_nh.getParam("publish_euler", m_wrapper_params.publish_euler);
-  m_nh.getParam("publish_quaternion", m_wrapper_params.publish_quaternion);
-  m_nh.getParam("publish_free_acceleration", m_wrapper_params.publish_free_acceleration);
-  m_nh.getParam("publish_pressure", m_wrapper_params.publish_pressure);
-  m_nh.getParam("publish_tf", m_wrapper_params.publish_tf);
-
-  bool nothing_to_publish =
-    (!m_wrapper_params.publish_imu && !m_wrapper_params.publish_acceleration
-     && !m_wrapper_params.publish_angular_velocity && !m_wrapper_params.publish_mag && !m_wrapper_params.publish_euler
-     && !m_wrapper_params.publish_quaternion && !m_wrapper_params.publish_free_acceleration
-     && !m_wrapper_params.publish_pressure && !m_wrapper_params.publish_tf);
-
-  if (nothing_to_publish) {
-    ROS_FATAL_STREAM("Xsens Mtw Wrapper... Nothing to publish. Closing");
-    ros::shutdown();
-  }
-
-  if (m_wrapper_params.enable_custom_labeling) {
-    XmlRpc::XmlRpcValue xml_sensor_labels;
-    if (m_nh.getParam("sensor_labels", xml_sensor_labels)) {
-
-      for (int i = 0; i < xml_sensor_labels.size(); ++i) {
-        m_ids_to_labels.emplace(xml_sensor_labels[i]["imu_id"], xml_sensor_labels[i]["label"]);
-      }
-    }
-  }
-}
-
-bool hiros::xsens_mtw::Wrapper::configureXsensMtw()
-{
-  ROS_INFO_STREAM("Xsens Mtw Wrapper... Configuring Xsens Mtw");
-
-  bool success = constructControl();
-  success = success && findWirelessMaster();
-  success = success && openPort();
-  success = success && getXsdeviceInstance();
-  success = success && setConfigMode();
-  attachCallbackHandler();
-  success = success && getClosestUpdateRate();
-  success = success && setUpdateRate();
-  success = success && setRadioChannel();
-
-  if (!success) {
-    ROS_FATAL_STREAM("Xsens Mtw Wrapper... Failed to configure Xsens Mtw");
-    return false;
-  }
-
-  return true;
 }
 
 bool hiros::xsens_mtw::Wrapper::waitMtwConnection()
@@ -381,8 +409,7 @@ bool hiros::xsens_mtw::Wrapper::startMeasurement()
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Starting measurement");
 
   if (!m_wireless_master_device->gotoMeasurement()) {
-    ROS_FATAL_STREAM(
-      "Xsens Mtw Wrapper... Failed to go to measurement mode: " << utils::toString(*m_wireless_master_device));
+    ROS_WARN_STREAM("Xsens Mtw Wrapper... Failed to go to measurement mode");
     return false;
   }
 
