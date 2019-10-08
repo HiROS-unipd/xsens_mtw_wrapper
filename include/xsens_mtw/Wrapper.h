@@ -66,8 +66,6 @@ namespace hiros {
       void attachCallbackHandlers();
       bool startMeasurement();
 
-      ros::Time computeSampleTime(const XsDataPacket& t_packet);
-
       bool constructControl();
       bool findWirelessMaster();
       bool openPort();
@@ -83,20 +81,17 @@ namespace hiros {
       {
         return "/" + m_node_namespace + "/" + t_id.toString().toStdString();
       };
+      void computeSampleTime();
 
-      sensor_msgs::Imu getImuMsg(const ros::Time& t_sample_time, const XsDataPacket& t_packet) const;
-      geometry_msgs::Vector3Stamped getAccelerationMsg(const ros::Time& t_sample_time,
-                                                       const XsDataPacket& t_packet) const;
-      geometry_msgs::Vector3Stamped getAngularVelocityMsg(const ros::Time& t_sample_time,
-                                                          const XsDataPacket& t_packet) const;
-      sensor_msgs::MagneticField getMagMsg(const ros::Time& t_sample_time, const XsDataPacket& t_packet) const;
-      hiros_xsens_mtw_wrapper::Euler getEulerMsg(const ros::Time& t_sample_time, const XsDataPacket& t_packet) const;
-      geometry_msgs::QuaternionStamped getQuaternionMsg(const ros::Time& t_sample_time,
-                                                        const XsDataPacket& t_packet) const;
-      geometry_msgs::Vector3Stamped getFreeAccelerationMsg(const ros::Time& t_sample_time,
-                                                           const XsDataPacket& t_packet) const;
-      sensor_msgs::FluidPressure getPressureMsg(const ros::Time& t_sample_time, const XsDataPacket& t_packet) const;
-      geometry_msgs::TransformStamped getTf(const ros::Time& t_sample_time, const XsDataPacket& t_packet) const;
+      sensor_msgs::Imu getImuMsg() const;
+      geometry_msgs::Vector3Stamped getAccelerationMsg() const;
+      geometry_msgs::Vector3Stamped getAngularVelocityMsg() const;
+      sensor_msgs::MagneticField getMagMsg() const;
+      hiros_xsens_mtw_wrapper::Euler getEulerMsg() const;
+      geometry_msgs::QuaternionStamped getQuaternionMsg() const;
+      geometry_msgs::Vector3Stamped getFreeAccelerationMsg() const;
+      sensor_msgs::FluidPressure getPressureMsg() const;
+      geometry_msgs::TransformStamped getTf() const;
 
       static inline void sighandler(int t_sig) { s_request_shutdown = (t_sig == SIGINT); };
 
@@ -126,6 +121,9 @@ namespace hiros {
 
       ros::NodeHandle m_nh;
       std::string m_node_namespace;
+
+      const XsDataPacket* m_packet;
+      ros::Time m_sample_time;
 
       std::vector<XsTimeStamp> m_prev_packet_time_of_arrival;
       std::vector<ros::Time> m_prev_packet_sample_time;
