@@ -41,13 +41,11 @@ void hiros::xsens_mtw::Wrapper::start()
   if (!startMeasurement()) {
     ros::shutdown();
   }
-
-  ROS_INFO_STREAM("Xsens Mtw Wrapper... RUNNING");
 }
 
 void hiros::xsens_mtw::Wrapper::run()
 {
-  ROS_INFO_STREAM("Xsens Mtw Wrapper... Publishing data. Press ctrl+c to quit");
+  ROS_INFO_STREAM(BASH_MSG_GREEN << "Xsens Mtw Wrapper... RUNNING" << BASH_MSG_RESET);
 
   while (ros::ok() && !s_request_shutdown) {
     for (size_t i = 0; i < m_number_of_connected_mtws; ++i) {
@@ -114,15 +112,15 @@ void hiros::xsens_mtw::Wrapper::stop()
     ros::shutdown();
   }
 
-  ROS_INFO_STREAM("Xsens Mtw Wrapper... Closing XsControl");
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Closing XsControl");
   m_control->close();
 
-  ROS_INFO_STREAM("Xsens Mtw Wrapper... Deleting MTW callbacks");
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Deleting MTW callbacks");
   for (auto& mtw_callback : m_mtw_callbacks) {
     delete (mtw_callback);
   }
 
-  ROS_INFO_STREAM("Xsens Mtw Wrapper... Shutting down ROS publishers");
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Shutting down ROS publishers");
 
   if (m_wrapper_params.publish_imu) {
     for (auto& pub : m_imu_pub) {
@@ -188,7 +186,7 @@ void hiros::xsens_mtw::Wrapper::stop()
     }
   }
 
-  ROS_INFO_STREAM("Xsens Mtw Wrapper... STOPPED");
+  ROS_INFO_STREAM(BASH_MSG_GREEN << "Xsens Mtw Wrapper... STOPPED" << BASH_MSG_RESET);
 
   ros::shutdown();
 }
@@ -289,7 +287,7 @@ bool hiros::xsens_mtw::Wrapper::waitMtwConnection()
 
 bool hiros::xsens_mtw::Wrapper::getMtwsDeviceIstances()
 {
-  ROS_INFO_STREAM("Xsens Mtw Wrapper... Getting XsDevice instances for all MTWs");
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Getting XsDevice instances for all MTWs");
 
   for (auto& xs_device_id : m_control->deviceIds()) {
     if (xs_device_id.isMtw()) {
@@ -313,7 +311,7 @@ bool hiros::xsens_mtw::Wrapper::getMtwsDeviceIstances()
 
 void hiros::xsens_mtw::Wrapper::setupRosTopics()
 {
-  ROS_INFO_STREAM("Xsens Mtw Wrapper... Setting up ROS topics");
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Setting up ROS topics");
 
   for (auto& device_id : m_mtw_device_ids) {
     if (m_wrapper_params.publish_imu) {
@@ -364,7 +362,7 @@ void hiros::xsens_mtw::Wrapper::initializeVectors()
 
 void hiros::xsens_mtw::Wrapper::attachCallbackHandlers()
 {
-  ROS_INFO_STREAM("Xsens Mtw Wrapper... Attaching callback handlers to MTWs");
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Attaching callback handlers to MTWs");
 
   m_mtw_callbacks.resize(m_mtw_devices.size());
   for (size_t i = 0; i < m_mtw_devices.size(); ++i) {
@@ -375,7 +373,7 @@ void hiros::xsens_mtw::Wrapper::attachCallbackHandlers()
 
 bool hiros::xsens_mtw::Wrapper::startMeasurement()
 {
-  ROS_INFO_STREAM("Xsens Mtw Wrapper... Starting measurement");
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Starting measurement");
 
   if (!m_wireless_master_device->gotoMeasurement()) {
     ROS_FATAL_STREAM(
@@ -415,7 +413,7 @@ ros::Time hiros::xsens_mtw::Wrapper::computeSampleTime(const XsDataPacket& t_pac
 
 bool hiros::xsens_mtw::Wrapper::constructControl()
 {
-  ROS_INFO_STREAM("Xsens Mtw Wrapper... Constructing XsControl");
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Constructing XsControl");
 
   m_control = XsControl::construct();
 
@@ -429,11 +427,11 @@ bool hiros::xsens_mtw::Wrapper::constructControl()
 
 bool hiros::xsens_mtw::Wrapper::findWirelessMaster()
 {
-  ROS_INFO_STREAM("Xsens Mtw Wrapper... Scanning ports");
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Scanning ports");
 
   m_detected_devices = XsScanner::scanPorts();
 
-  ROS_INFO_STREAM("Xsens Mtw Wrapper... Finding wireless master");
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Finding wireless master");
 
   m_wireless_master_port = m_detected_devices.begin();
   while (m_wireless_master_port != m_detected_devices.end() && !m_wireless_master_port->deviceId().isWirelessMaster()) {
@@ -451,7 +449,7 @@ bool hiros::xsens_mtw::Wrapper::findWirelessMaster()
 
 bool hiros::xsens_mtw::Wrapper::openPort()
 {
-  ROS_INFO_STREAM("Xsens Mtw Wrapper... Opening port");
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Opening port");
 
   if (!m_control->openPort(m_wireless_master_port->portName().toStdString(), m_wireless_master_port->baudrate())) {
     ROS_FATAL_STREAM("Xsens Mtw Wrapper... Failed to open port " << *m_wireless_master_port);
@@ -463,7 +461,7 @@ bool hiros::xsens_mtw::Wrapper::openPort()
 
 bool hiros::xsens_mtw::Wrapper::getXsdeviceInstance()
 {
-  ROS_INFO_STREAM("Xsens Mtw Wrapper... Getting XsDevice instance for wireless master");
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Getting XsDevice instance for wireless master");
 
   m_wireless_master_device = m_control->device(m_wireless_master_port->deviceId());
   if (m_wireless_master_device == nullptr) {
@@ -471,13 +469,13 @@ bool hiros::xsens_mtw::Wrapper::getXsdeviceInstance()
     return false;
   }
 
-  ROS_INFO_STREAM("Xsens Mtw Wrapper... XsDevice instance created @ " << utils::toString(*m_wireless_master_device));
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... XsDevice instance created @ " << utils::toString(*m_wireless_master_device));
   return true;
 }
 
 bool hiros::xsens_mtw::Wrapper::setConfigMode()
 {
-  ROS_INFO_STREAM("Xsens Mtw Wrapper... Setting config mode");
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Setting config mode");
 
   if (!m_wireless_master_device->gotoConfig()) {
     ROS_FATAL_STREAM("Xsens Mtw Wrapper... Failed to go to config mode: " + utils::toString(*m_wireless_master_device));
@@ -489,14 +487,14 @@ bool hiros::xsens_mtw::Wrapper::setConfigMode()
 
 void hiros::xsens_mtw::Wrapper::attachCallbackHandler()
 {
-  ROS_INFO_STREAM("Xsens Mtw Wrapper... Attaching callback handler");
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Attaching callback handler");
 
   m_wireless_master_device->addCallbackHandler(&m_wireless_master_callback);
 }
 
 bool hiros::xsens_mtw::Wrapper::getClosestUpdateRate()
 {
-  ROS_INFO_STREAM("Xsens Mtw Wrapper... Getting the list of the supported update rates");
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Getting the list of the supported update rates");
 
   const XsIntArray supported_update_rates = m_wireless_master_device->supportedUpdateRates();
 
@@ -535,7 +533,8 @@ bool hiros::xsens_mtw::Wrapper::getClosestUpdateRate()
 
 bool hiros::xsens_mtw::Wrapper::setUpdateRate()
 {
-  ROS_INFO_STREAM("Xsens Mtw Wrapper... Setting update rate to " << m_update_rate << " Hz");
+  ROS_INFO_STREAM(BASH_MSG_GREEN << "Xsens Mtw Wrapper... Setting update rate to " << m_update_rate << " Hz"
+                                 << BASH_MSG_RESET);
 
   if (!m_wireless_master_device->setUpdateRate(m_update_rate)) {
     ROS_FATAL_STREAM("Xsens Mtw Wrapper... Failed to set update rate: " << utils::toString(*m_wireless_master_device));
@@ -548,14 +547,14 @@ bool hiros::xsens_mtw::Wrapper::setUpdateRate()
 bool hiros::xsens_mtw::Wrapper::setRadioChannel()
 {
   if (m_wireless_master_device->isRadioEnabled()) {
-    ROS_INFO_STREAM("Xsens Mtw Wrapper... Disabling previously enabled radio channel");
+    ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Disabling previously enabled radio channel");
     if (!disableRadio()) {
       return false;
     }
   }
 
-  ROS_INFO_STREAM("Xsens Mtw Wrapper... Setting radio channel to " << m_mtw_params.desired_radio_channel
-                                                                   << " and enabling radio");
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Setting radio channel to " << m_mtw_params.desired_radio_channel
+                                                                    << " and enabling radio");
   if (!m_wireless_master_device->enableRadio(m_mtw_params.desired_radio_channel)) {
     ROS_FATAL_STREAM(
       "Xsens Mtw Wrapper... Failed to set radio channel: " << utils::toString(*m_wireless_master_device));
@@ -567,7 +566,7 @@ bool hiros::xsens_mtw::Wrapper::setRadioChannel()
 
 bool hiros::xsens_mtw::Wrapper::disableRadio()
 {
-  ROS_INFO_STREAM("Xsens Mtw Wrapper... Disabling radio");
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Disabling radio");
 
   if (!m_wireless_master_device->disableRadio()) {
     ROS_FATAL_STREAM("Xsens Mtw Wrapper... Failed to disable radio: " << utils::toString(*m_wireless_master_device));

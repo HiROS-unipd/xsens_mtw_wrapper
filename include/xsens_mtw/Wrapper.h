@@ -18,6 +18,9 @@
 #include "xsens_mtw/MtwCallback.h"
 #include "xsens_mtw/WirelessMasterCallback.h"
 
+#define BASH_MSG_RESET "\033[0m"
+#define BASH_MSG_GREEN "\033[32m"
+
 namespace hiros {
   namespace xsens_mtw {
 
