@@ -117,7 +117,6 @@ namespace hiros {
       unsigned long m_number_of_connected_mtws;
       std::map<std::string, std::string> m_ids_to_labels;
 
-      XsDeviceIdArray m_all_device_ids;
       XsDeviceIdArray m_mtw_device_ids;
       XsDevicePtrArray m_mtw_devices;
 
