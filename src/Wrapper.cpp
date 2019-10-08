@@ -627,21 +627,21 @@ sensor_msgs::Imu hiros::xsens_mtw::Wrapper::getImuMsg() const
     out_msg.orientation.y = m_packet->orientationQuaternion().y();
     out_msg.orientation.z = m_packet->orientationQuaternion().z();
     out_msg.orientation.w = m_packet->orientationQuaternion().w();
-    out_msg.orientation_covariance.front() = -1.0;
+    out_msg.orientation_covariance.front() = 0.0;
   }
 
   if (m_packet->containsCalibratedGyroscopeData()) {
     out_msg.angular_velocity.x = m_packet->calibratedGyroscopeData().at(0);
     out_msg.angular_velocity.y = m_packet->calibratedGyroscopeData().at(1);
     out_msg.angular_velocity.z = m_packet->calibratedGyroscopeData().at(2);
-    out_msg.angular_velocity_covariance.front() = -1.0;
+    out_msg.angular_velocity_covariance.front() = 0.0;
   }
 
   if (m_packet->containsCalibratedAcceleration()) {
     out_msg.linear_acceleration.x = m_packet->calibratedAcceleration().at(0);
     out_msg.linear_acceleration.y = m_packet->calibratedAcceleration().at(1);
     out_msg.linear_acceleration.z = m_packet->calibratedAcceleration().at(2);
-    out_msg.linear_acceleration_covariance.front() = -1.0;
+    out_msg.linear_acceleration_covariance.front() = 0.0;
   }
 
   return out_msg;
