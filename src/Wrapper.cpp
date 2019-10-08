@@ -277,14 +277,9 @@ bool hiros::xsens_mtw::Wrapper::waitMtwConnection()
 {
   ROS_INFO_STREAM("Xsens Mtw Wrapper... Waiting for MTW to wirelessly connect");
 
-  for (unsigned int cnt = 0; cnt < m_connection_attempts; ++cnt) {
-    XsTime::msleep(100);
+  XsTime::msleep(m_connection_timeout);
 
-    size_t next_count = m_wireless_master_callback.getWirelessMTWs().size();
-    if (next_count != m_number_of_connected_mtws) {
-      m_number_of_connected_mtws = next_count;
-    }
-  }
+  m_number_of_connected_mtws = m_wireless_master_callback.getWirelessMTWs().size();
   ROS_INFO_STREAM("Xsens Mtw Wrapper... Number of connected MTWs: " << m_number_of_connected_mtws);
 
   if (m_number_of_connected_mtws == 0) {

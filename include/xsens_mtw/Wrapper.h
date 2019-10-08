@@ -110,7 +110,7 @@ namespace hiros {
       int m_update_rate;
       double m_sample_time_epsilon;
 
-      const unsigned int m_connection_attempts = 50;
+      const unsigned int m_connection_timeout = 5000; // [ms]
       unsigned long m_number_of_connected_mtws;
       std::map<std::string, std::string> m_ids_to_labels;
 
