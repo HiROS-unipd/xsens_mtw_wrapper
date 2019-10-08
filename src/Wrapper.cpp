@@ -214,6 +214,11 @@ void hiros::xsens_mtw::Wrapper::configureWrapper()
 {
   ROS_INFO_STREAM("Xsens Mtw Wrapper... Configuring Wrapper");
 
+  m_nh.getParam("desired_update_rate", m_mtw_params.desired_update_rate);
+  m_nh.getParam("desired_radio_channel", m_mtw_params.desired_radio_channel);
+
+  m_nh.getParam("enable_custom_labeling", m_wrapper_params.enable_custom_labeling);
+
   m_nh.getParam("publish_imu", m_wrapper_params.publish_imu);
   m_nh.getParam("publish_acceleration", m_wrapper_params.publish_acceleration);
   m_nh.getParam("publish_angular_velocity", m_wrapper_params.publish_angular_velocity);
@@ -234,14 +239,21 @@ void hiros::xsens_mtw::Wrapper::configureWrapper()
     ROS_FATAL_STREAM("Xsens Mtw Wrapper... Nothing to publish. Closing");
     ros::shutdown();
   }
+
+  if (m_wrapper_params.enable_custom_labeling) {
+    XmlRpc::XmlRpcValue xml_sensor_labels;
+    if (m_nh.getParam("sensor_labels", xml_sensor_labels)) {
+
+      for (int i = 0; i < xml_sensor_labels.size(); ++i) {
+        m_ids_to_labels.emplace(xml_sensor_labels[i]["imu_id"], xml_sensor_labels[i]["label"]);
+      }
+    }
+  }
 }
 
 bool hiros::xsens_mtw::Wrapper::configureXsensMtw()
 {
   ROS_INFO_STREAM("Xsens Mtw Wrapper... Configuring Xsens Mtw");
-
-  m_nh.getParam("desired_update_rate", m_mtw_params.desired_update_rate);
-  m_nh.getParam("desired_radio_channel", m_mtw_params.desired_radio_channel);
 
   bool success = constructControl();
   success = success && findWirelessMaster();
@@ -380,6 +392,18 @@ bool hiros::xsens_mtw::Wrapper::startMeasurement()
   }
 
   return true;
+}
+
+std::string hiros::xsens_mtw::Wrapper::getDeviceLabel(const XsDeviceId& t_id) const
+{
+  return (m_ids_to_labels.find(t_id.toString().toStdString()) != m_ids_to_labels.end())
+           ? m_ids_to_labels.at(t_id.toString().toStdString())
+           : t_id.toString().toStdString();
+}
+
+std::string hiros::xsens_mtw::Wrapper::composeTopicPrefix(const XsDeviceId& t_id) const
+{
+  return "/" + m_node_namespace + "/" + getDeviceLabel(t_id);
 }
 
 void hiros::xsens_mtw::Wrapper::computeSampleTime()
@@ -574,7 +598,7 @@ sensor_msgs::Imu hiros::xsens_mtw::Wrapper::getImuMsg() const
 {
   sensor_msgs::Imu out_msg;
   out_msg.header.stamp = m_sample_time;
-  out_msg.header.frame_id = m_packet->deviceId().toString().toStdString();
+  out_msg.header.frame_id = getDeviceLabel(m_packet->deviceId());
 
   if (m_packet->containsOrientation()) {
     out_msg.orientation.x = m_packet->orientationQuaternion().x();
@@ -605,7 +629,7 @@ geometry_msgs::Vector3Stamped hiros::xsens_mtw::Wrapper::getAccelerationMsg() co
 {
   geometry_msgs::Vector3Stamped out_msg;
   out_msg.header.stamp = m_sample_time;
-  out_msg.header.frame_id = m_packet->deviceId().toString().toStdString();
+  out_msg.header.frame_id = getDeviceLabel(m_packet->deviceId());
 
   if (m_packet->containsCalibratedAcceleration()) {
     out_msg.vector.x = m_packet->calibratedAcceleration().at(0);
@@ -620,7 +644,7 @@ geometry_msgs::Vector3Stamped hiros::xsens_mtw::Wrapper::getAngularVelocityMsg()
 {
   geometry_msgs::Vector3Stamped out_msg;
   out_msg.header.stamp = m_sample_time;
-  out_msg.header.frame_id = m_packet->deviceId().toString().toStdString();
+  out_msg.header.frame_id = getDeviceLabel(m_packet->deviceId());
 
   if (m_packet->containsCalibratedGyroscopeData()) {
     out_msg.vector.x = m_packet->calibratedGyroscopeData().at(0);
@@ -635,7 +659,7 @@ sensor_msgs::MagneticField hiros::xsens_mtw::Wrapper::getMagMsg() const
 {
   sensor_msgs::MagneticField out_msg;
   out_msg.header.stamp = m_sample_time;
-  out_msg.header.frame_id = m_packet->deviceId().toString().toStdString();
+  out_msg.header.frame_id = getDeviceLabel(m_packet->deviceId());
 
   if (m_packet->containsCalibratedMagneticField()) {
     out_msg.magnetic_field.x = m_packet->calibratedMagneticField().at(0);
@@ -651,7 +675,7 @@ hiros_xsens_mtw_wrapper::Euler hiros::xsens_mtw::Wrapper::getEulerMsg() const
 {
   hiros_xsens_mtw_wrapper::Euler out_msg;
   out_msg.header.stamp = m_sample_time;
-  out_msg.header.frame_id = m_packet->deviceId().toString().toStdString();
+  out_msg.header.frame_id = getDeviceLabel(m_packet->deviceId());
 
   if (m_packet->containsOrientation()) {
     // roll = atan2(2 * (qw * qx + qy * qz), (1 - 2 * (pow(qx, 2) + pow(qy, 2))))
@@ -669,7 +693,7 @@ geometry_msgs::QuaternionStamped hiros::xsens_mtw::Wrapper::getQuaternionMsg() c
 {
   geometry_msgs::QuaternionStamped out_msg;
   out_msg.header.stamp = m_sample_time;
-  out_msg.header.frame_id = m_packet->deviceId().toString().toStdString();
+  out_msg.header.frame_id = getDeviceLabel(m_packet->deviceId());
 
   if (m_packet->containsOrientation()) {
     out_msg.quaternion.x = m_packet->orientationQuaternion().x();
@@ -685,7 +709,7 @@ geometry_msgs::Vector3Stamped hiros::xsens_mtw::Wrapper::getFreeAccelerationMsg(
 {
   geometry_msgs::Vector3Stamped out_msg;
   out_msg.header.stamp = m_sample_time;
-  out_msg.header.frame_id = m_packet->deviceId().toString().toStdString();
+  out_msg.header.frame_id = getDeviceLabel(m_packet->deviceId());
 
   if (m_packet->containsFreeAcceleration()) {
     out_msg.vector.x = m_packet->freeAcceleration().at(0);
@@ -700,7 +724,7 @@ sensor_msgs::FluidPressure hiros::xsens_mtw::Wrapper::getPressureMsg() const
 {
   sensor_msgs::FluidPressure out_msg;
   out_msg.header.stamp = m_sample_time;
-  out_msg.header.frame_id = m_packet->deviceId().toString().toStdString();
+  out_msg.header.frame_id = getDeviceLabel(m_packet->deviceId());
 
   if (m_packet->containsPressure()) {
     out_msg.fluid_pressure = m_packet->pressure().m_pressure;
@@ -715,7 +739,7 @@ geometry_msgs::TransformStamped hiros::xsens_mtw::Wrapper::getTf() const
   geometry_msgs::TransformStamped tf;
   tf.header.stamp = m_sample_time;
   tf.header.frame_id = "world";
-  tf.child_frame_id = m_packet->deviceId().toString().toStdString();
+  tf.child_frame_id = getDeviceLabel(m_packet->deviceId());
 
   if (m_packet->containsOrientation()) {
     tf.transform.translation.x = 0.0;

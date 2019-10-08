@@ -32,6 +32,8 @@ namespace hiros {
 
     struct WrapperParameters
     {
+      bool enable_custom_labeling;
+
       bool publish_imu;
       bool publish_acceleration;
       bool publish_angular_velocity;
@@ -77,10 +79,8 @@ namespace hiros {
       bool setRadioChannel();
       bool disableRadio();
 
-      inline std::string composeTopicPrefix(const XsDeviceId& t_id) const
-      {
-        return "/" + m_node_namespace + "/" + t_id.toString().toStdString();
-      };
+      std::string getDeviceLabel(const XsDeviceId& t_id) const;
+      std::string composeTopicPrefix(const XsDeviceId& t_id) const;
       void computeSampleTime();
 
       sensor_msgs::Imu getImuMsg() const;
@@ -112,6 +112,7 @@ namespace hiros {
 
       const unsigned int m_connection_attempts = 50;
       unsigned long m_number_of_connected_mtws;
+      std::map<std::string, std::string> m_ids_to_labels;
 
       XsDeviceIdArray m_all_device_ids;
       XsDeviceIdArray m_mtw_device_ids;

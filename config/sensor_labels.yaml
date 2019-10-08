@@ -1,0 +1,18 @@
+sensor_labels:
+  - imu_id: 00B44BFF
+    label: imu_0
+
+  - imu_id: 00B44C00
+    label: imu_1
+
+  - imu_id: 00B44C01
+    label: imu_2
+
+  - imu_id: 00B44C03
+    label: imu_3
+
+  - imu_id: 00B44C0A
+    label: imu_4
+
+  - imu_id: 00B44FC5
+    label: imu_5

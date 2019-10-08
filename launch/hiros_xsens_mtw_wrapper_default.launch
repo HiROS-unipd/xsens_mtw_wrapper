@@ -1,29 +1,33 @@
 <?xml version="1.0"?>
 
 <launch>
+  <arg name="xsens_mtw_node_required"   default="false"     />
+  <arg name="node_name"                 default="xsens_mtw" />
 
-  <arg name="xsens_mtw_node_required" default="false"     />
-  <arg name="node_name"               default="xsens_mtw" />
+  <arg name="desired_update_rate"       default="100"       />
+  <arg name="desired_radio_channel"     default="19"        />
 
-  <arg name="desired_update_rate"     default="75"        />
-  <arg name="desired_radio_channel"   default="19"        />
+  <arg name="enable_custom_labeling"    default="false"     />
 
-  <arg name="publish_imu"               default="true"    />
-  <arg name="publish_acceleration"      default="true"    />
-  <arg name="publish_angular_velocity"  default="true"    />
-  <arg name="publish_mag"               default="true"    />
-  <arg name="publish_euler"             default="true"    />
-  <arg name="publish_quaternion"        default="true"    />
-  <arg name="publish_free_acceleration" default="true"    />
-  <arg name="publish_pressure"          default="true"    />
-  <arg name="publish_tf"                default="true"    />
+  <arg name="publish_imu"               default="true"      />
+  <arg name="publish_acceleration"      default="true"      />
+  <arg name="publish_angular_velocity"  default="true"      />
+  <arg name="publish_mag"               default="true"      />
+  <arg name="publish_euler"             default="true"      />
+  <arg name="publish_quaternion"        default="true"      />
+  <arg name="publish_free_acceleration" default="true"      />
+  <arg name="publish_pressure"          default="true"      />
+  <arg name="publish_tf"                default="true"      />
 
   <node pkg="hiros_xsens_mtw_wrapper" type="hiros_xsens_mtw_wrapper" name="$(arg node_name)" output="screen" required="$(arg xsens_mtw_node_required)">
+    <rosparam if="$(arg enable_custom_labeling)" command="load" file="$(find hiros_xsens_mtw_wrapper)/config/sensor_labels.yaml" />
 
     <param name="node_name"                 type="str"  value="$(arg node_name)"                 />
 
     <param name="desired_update_rate"       type="int"  value="$(arg desired_update_rate)"       />
     <param name="desired_radio_channel"     type="int"  value="$(arg desired_radio_channel)"     />
+
+    <param name="enable_custom_labeling"    type="bool" value="$(arg enable_custom_labeling)"    />
 
     <param name="publish_imu"               type="bool" value="$(arg publish_imu)"               />
     <param name="publish_acceleration"      type="bool" value="$(arg publish_acceleration)"      />
@@ -34,7 +38,5 @@
     <param name="publish_free_acceleration" type="bool" value="$(arg publish_free_acceleration)" />
     <param name="publish_pressure"          type="bool" value="$(arg publish_pressure)"          />
     <param name="publish_tf"                type="bool" value="$(arg publish_tf)"                />
-
   </node>
-
 </launch>

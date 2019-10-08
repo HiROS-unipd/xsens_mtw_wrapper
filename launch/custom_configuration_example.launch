@@ -1,24 +1,22 @@
 <?xml version="1.0"?>
 
 <launch>
-
   <include file="$(find hiros_xsens_mtw_wrapper)/launch/hiros_xsens_mtw_wrapper_default.launch">
-
     <arg name="xsens_mtw_node_required"   value="true"             />
     <arg name="node_name"                 value="xsens_node_01"    />
 
-    <arg name="desired_update_rate"       value="100"              />
+    <arg name="desired_update_rate"       value="120"              />
+
+    <arg name="enable_custom_labeling"    value="true"             />
 
     <arg name="publish_imu"               value="true"             />
-    <arg name="publish_acceleration"      value="true"             />
-    <arg name="publish_angular_velocity"  value="true"             />
+    <arg name="publish_acceleration"      value="false"            />
+    <arg name="publish_angular_velocity"  value="false"            />
     <arg name="publish_mag"               value="true"             />
     <arg name="publish_euler"             value="true"             />
-    <arg name="publish_quaternion"        value="true"             />
-    <arg name="publish_free_acceleration" value="true"             />
-    <arg name="publish_pressure"          value="true"             />
+    <arg name="publish_quaternion"        value="false"            />
+    <arg name="publish_free_acceleration" value="false"            />
+    <arg name="publish_pressure"          value="false"            />
     <arg name="publish_tf"                value="true"             />
-
   </include>
-
 </launch>
