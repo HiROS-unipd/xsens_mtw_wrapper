@@ -66,8 +66,6 @@ namespace hiros {
 
       bool waitMtwConnection();
       bool getMtwsDeviceIstances();
-      void setupRosTopics();
-      void initializeVectors();
       void attachCallbackHandlers();
       bool startMeasurement();
 
@@ -83,6 +81,8 @@ namespace hiros {
       bool disableRadio();
 
       inline void setSampleTimeEpsilon() { m_sample_time_epsilon = (0.5 / m_update_rate); }
+      void initializeVectors();
+      void setupRosTopics();
       std::string getDeviceLabel(const XsDeviceId& t_id) const;
       std::string composeTopicPrefix(const XsDeviceId& t_id) const;
       void computeSampleTime();
