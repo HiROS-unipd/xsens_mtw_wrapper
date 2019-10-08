@@ -55,6 +55,7 @@ void hiros::xsens_mtw::Wrapper::start()
 
   setupRosTopics();
   initializeVectors();
+  setSampleTimeEpsilon();
 }
 
 void hiros::xsens_mtw::Wrapper::run()
@@ -566,7 +567,6 @@ bool hiros::xsens_mtw::Wrapper::getClosestUpdateRate()
   }
 
   m_update_rate = closest_update_rate;
-  m_sample_time_epsilon = (0.5 / m_update_rate);
 
   return true;
 }

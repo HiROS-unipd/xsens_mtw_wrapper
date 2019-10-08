@@ -82,6 +82,7 @@ namespace hiros {
       bool setRadioChannel();
       bool disableRadio();
 
+      inline void setSampleTimeEpsilon() { m_sample_time_epsilon = (0.5 / m_update_rate); }
       std::string getDeviceLabel(const XsDeviceId& t_id) const;
       std::string composeTopicPrefix(const XsDeviceId& t_id) const;
       void computeSampleTime();
