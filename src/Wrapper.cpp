@@ -125,15 +125,13 @@ bool hiros::xsens_mtw::Wrapper::configure()
   }
 
   configureWrapper();
-  bool success = configureXsensMtw();
+  m_xsens_mtw_configured = configureXsensMtw();
 
-  m_xsens_mtw_configured = true;
-
-  if (success) {
+  if (m_xsens_mtw_configured) {
     ROS_DEBUG_STREAM("Xsens Mtw Wrapper... CONFIGURED");
   }
 
-  return success;
+  return m_xsens_mtw_configured;
 }
 
 void hiros::xsens_mtw::Wrapper::stop()
@@ -205,10 +203,9 @@ bool hiros::xsens_mtw::Wrapper::configureXsensMtw()
 
   if (!success) {
     ROS_FATAL_STREAM("Xsens Mtw Wrapper... Failed to configure Xsens Mtw");
-    return false;
   }
 
-  return true;
+  return success;
 }
 
 void hiros::xsens_mtw::Wrapper::stopXsensMtw()
