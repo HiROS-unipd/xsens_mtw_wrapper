@@ -2,7 +2,7 @@
 <package format="2">
   <name>hiros_xsens_mtw_wrapper</name>
   <version>0.1.0</version>
-  <description>Hi-ROS mantained xsens_mtw_wrapper package package</description>
+  <description>Hi-ROS mantained xsens_mtw_wrapper package</description>
   <maintainer email="mattia.guidolin@phd.unipd.it">Mattia Guidolin</maintainer>
   <maintainer email="luca.tagliapietra@unipd.it">Luca Tagliapietra</maintainer>
   <license>TODO</license>
