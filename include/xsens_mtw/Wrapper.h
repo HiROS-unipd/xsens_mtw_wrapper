@@ -7,10 +7,10 @@
 // ROS dependencies
 #include "geometry_msgs/QuaternionStamped.h"
 #include "geometry_msgs/Vector3Stamped.h"
+#include "ros/ros.h"
 #include "sensor_msgs/FluidPressure.h"
 #include "sensor_msgs/Imu.h"
 #include "sensor_msgs/MagneticField.h"
-#include "sensor_msgs/TimeReference.h"
 #include "tf2_ros/transform_broadcaster.h"
 
 // Internal dependencies
