@@ -96,7 +96,7 @@ target_link_libraries(${PROJECT_NAME}_node
                       PRIVATE ${Xsens_LIBRARIES})
 
 set_target_properties(${PROJECT_NAME}_node
-                      PROPERTIES PUBLIC_HEADER include/xsens_mtw/wrapper.h)
+                      PROPERTIES PUBLIC_HEADER include/xsens_mtw/Wrapper.h)
 
 target_include_directories(${PROJECT_NAME}_node
                            PRIVATE include
@@ -109,7 +109,7 @@ target_include_directories(${PROJECT_NAME}_node
 install(TARGETS ${PROJECT_NAME}_node
         RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
-install(FILES include/xsens_mtw/wrapper.h
+install(FILES include/xsens_mtw/Wrapper.h
         DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
 
 install(DIRECTORY launch DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
