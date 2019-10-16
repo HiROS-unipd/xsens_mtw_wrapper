@@ -631,6 +631,13 @@ sensor_msgs::Imu hiros::xsens_mtw::Wrapper::getImuMsg() const
     out_msg.orientation.w = m_packet->orientationQuaternion().w();
     out_msg.orientation_covariance.front() = 0.0;
   }
+  else {
+    out_msg.orientation.x = std::numeric_limits<double>::quiet_NaN();
+    out_msg.orientation.y = std::numeric_limits<double>::quiet_NaN();
+    out_msg.orientation.z = std::numeric_limits<double>::quiet_NaN();
+    out_msg.orientation.w = std::numeric_limits<double>::quiet_NaN();
+    out_msg.orientation_covariance.front() = -1.0;
+  }
 
   if (m_packet->containsCalibratedGyroscopeData()) {
     out_msg.angular_velocity.x = m_packet->calibratedGyroscopeData().at(0);
@@ -638,12 +645,24 @@ sensor_msgs::Imu hiros::xsens_mtw::Wrapper::getImuMsg() const
     out_msg.angular_velocity.z = m_packet->calibratedGyroscopeData().at(2);
     out_msg.angular_velocity_covariance.front() = 0.0;
   }
+  else {
+    out_msg.angular_velocity.x = std::numeric_limits<double>::quiet_NaN();
+    out_msg.angular_velocity.y = std::numeric_limits<double>::quiet_NaN();
+    out_msg.angular_velocity.z = std::numeric_limits<double>::quiet_NaN();
+    out_msg.angular_velocity_covariance.front() = -1.0;
+  }
 
   if (m_packet->containsCalibratedAcceleration()) {
     out_msg.linear_acceleration.x = m_packet->calibratedAcceleration().at(0);
     out_msg.linear_acceleration.y = m_packet->calibratedAcceleration().at(1);
     out_msg.linear_acceleration.z = m_packet->calibratedAcceleration().at(2);
     out_msg.linear_acceleration_covariance.front() = 0.0;
+  }
+  else {
+    out_msg.linear_acceleration.x = std::numeric_limits<double>::quiet_NaN();
+    out_msg.linear_acceleration.y = std::numeric_limits<double>::quiet_NaN();
+    out_msg.linear_acceleration.z = std::numeric_limits<double>::quiet_NaN();
+    out_msg.linear_acceleration_covariance.front() = -1.0;
   }
 
   return out_msg;
@@ -660,6 +679,11 @@ geometry_msgs::Vector3Stamped hiros::xsens_mtw::Wrapper::getAccelerationMsg() co
     out_msg.vector.y = m_packet->calibratedAcceleration().at(1);
     out_msg.vector.z = m_packet->calibratedAcceleration().at(2);
   }
+  else {
+    out_msg.vector.x = std::numeric_limits<double>::quiet_NaN();
+    out_msg.vector.y = std::numeric_limits<double>::quiet_NaN();
+    out_msg.vector.z = std::numeric_limits<double>::quiet_NaN();
+  }
 
   return out_msg;
 }
@@ -674,6 +698,11 @@ geometry_msgs::Vector3Stamped hiros::xsens_mtw::Wrapper::getAngularVelocityMsg()
     out_msg.vector.x = m_packet->calibratedGyroscopeData().at(0);
     out_msg.vector.y = m_packet->calibratedGyroscopeData().at(1);
     out_msg.vector.z = m_packet->calibratedGyroscopeData().at(2);
+  }
+  else {
+    out_msg.vector.x = std::numeric_limits<double>::quiet_NaN();
+    out_msg.vector.y = std::numeric_limits<double>::quiet_NaN();
+    out_msg.vector.z = std::numeric_limits<double>::quiet_NaN();
   }
 
   return out_msg;
@@ -690,6 +719,12 @@ sensor_msgs::MagneticField hiros::xsens_mtw::Wrapper::getMagMsg() const
     out_msg.magnetic_field.y = m_packet->calibratedMagneticField().at(1);
     out_msg.magnetic_field.z = m_packet->calibratedMagneticField().at(2);
     out_msg.magnetic_field_covariance.front() = 0.0;
+  }
+  else {
+    out_msg.magnetic_field.x = std::numeric_limits<double>::quiet_NaN();
+    out_msg.magnetic_field.y = std::numeric_limits<double>::quiet_NaN();
+    out_msg.magnetic_field.z = std::numeric_limits<double>::quiet_NaN();
+    out_msg.magnetic_field_covariance.front() = -1.0;
   }
 
   return out_msg;
@@ -709,6 +744,11 @@ hiros_xsens_mtw_wrapper::Euler hiros::xsens_mtw::Wrapper::getEulerMsg() const
     // yaw = atan2(2 * (qw * qz + qx * qy), (1 - 2 * (pow(qy, 2) + pow(qz, 2))))
     out_msg.yaw = m_packet->orientationEuler().yaw();
   }
+  else {
+    out_msg.roll = std::numeric_limits<double>::quiet_NaN();
+    out_msg.pitch = std::numeric_limits<double>::quiet_NaN();
+    out_msg.yaw = std::numeric_limits<double>::quiet_NaN();
+  }
 
   return out_msg;
 }
@@ -725,6 +765,12 @@ geometry_msgs::QuaternionStamped hiros::xsens_mtw::Wrapper::getQuaternionMsg() c
     out_msg.quaternion.z = m_packet->orientationQuaternion().z();
     out_msg.quaternion.w = m_packet->orientationQuaternion().w();
   }
+  else {
+    out_msg.quaternion.x = std::numeric_limits<double>::quiet_NaN();
+    out_msg.quaternion.y = std::numeric_limits<double>::quiet_NaN();
+    out_msg.quaternion.z = std::numeric_limits<double>::quiet_NaN();
+    out_msg.quaternion.w = std::numeric_limits<double>::quiet_NaN();
+  }
 
   return out_msg;
 }
@@ -740,6 +786,11 @@ geometry_msgs::Vector3Stamped hiros::xsens_mtw::Wrapper::getFreeAccelerationMsg(
     out_msg.vector.y = m_packet->freeAcceleration().at(1);
     out_msg.vector.z = m_packet->freeAcceleration().at(2);
   }
+  else {
+    out_msg.vector.x = std::numeric_limits<double>::quiet_NaN();
+    out_msg.vector.y = std::numeric_limits<double>::quiet_NaN();
+    out_msg.vector.z = std::numeric_limits<double>::quiet_NaN();
+  }
 
   return out_msg;
 }
@@ -753,6 +804,10 @@ sensor_msgs::FluidPressure hiros::xsens_mtw::Wrapper::getPressureMsg() const
   if (m_packet->containsPressure()) {
     out_msg.fluid_pressure = m_packet->pressure().m_pressure;
     out_msg.variance = 0.0;
+  }
+  else {
+    out_msg.fluid_pressure = std::numeric_limits<double>::quiet_NaN();
+    out_msg.variance = -1.0;
   }
 
   return out_msg;
