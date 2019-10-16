@@ -101,7 +101,9 @@ void hiros::xsens_mtw::Wrapper::run()
         }
 
         if (m_wrapper_params.publish_tf) {
-          m_tf_broadcaster.sendTransform(getTf());
+          if (m_packet->containsOrientation()) {
+            m_tf_broadcaster.sendTransform(getTf());
+          }
         }
 
         m_mtw_callbacks.at(i)->deleteOldestPacket();
@@ -763,15 +765,13 @@ geometry_msgs::TransformStamped hiros::xsens_mtw::Wrapper::getTf() const
   tf.header.frame_id = "world";
   tf.child_frame_id = getDeviceLabel(m_packet->deviceId());
 
-  if (m_packet->containsOrientation()) {
-    tf.transform.translation.x = 0.0;
-    tf.transform.translation.y = 0.0;
-    tf.transform.translation.z = 0.0;
-    tf.transform.rotation.x = m_packet->orientationQuaternion().x();
-    tf.transform.rotation.y = m_packet->orientationQuaternion().y();
-    tf.transform.rotation.z = m_packet->orientationQuaternion().z();
-    tf.transform.rotation.w = m_packet->orientationQuaternion().w();
-  }
+  tf.transform.translation.x = 0.0;
+  tf.transform.translation.y = 0.0;
+  tf.transform.translation.z = 0.0;
+  tf.transform.rotation.x = m_packet->orientationQuaternion().x();
+  tf.transform.rotation.y = m_packet->orientationQuaternion().y();
+  tf.transform.rotation.z = m_packet->orientationQuaternion().z();
+  tf.transform.rotation.w = m_packet->orientationQuaternion().w();
 
   return tf;
 }
