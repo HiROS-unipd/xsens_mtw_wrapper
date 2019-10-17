@@ -16,7 +16,7 @@ Contains an example on how to set some parameters of choice
 ## Usage
 ```
 roslaunch hiros_xsens_mtw_wrapper custom_configuration_example.launch
-
+```
 
 ## Perform online reset of IMU(s) orientation
 To reset the orientation of IMUs separately by label <imu_0, imu_1>:
