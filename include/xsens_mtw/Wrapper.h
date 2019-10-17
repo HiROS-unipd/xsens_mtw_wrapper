@@ -81,7 +81,7 @@ namespace hiros {
       bool disableRadio();
 
       inline void setSampleTimeEpsilon() { m_sample_time_epsilon = (0.5 / m_update_rate); }
-      void initializeVectors();
+      void initializeTimeMaps();
       void setupRosTopics();
       std::string getDeviceLabel(const XsDeviceId& t_id) const;
       std::string composeTopicPrefix(const XsDeviceId& t_id) const;
@@ -116,10 +116,9 @@ namespace hiros {
 
       const unsigned int m_connection_timeout = 5000; // [ms]
       unsigned long m_number_of_connected_mtws;
-      std::map<std::string, std::string> m_ids_to_labels;
 
-      XsDeviceIdArray m_mtw_device_ids;
-      XsDevicePtrArray m_mtw_devices;
+      std::map<XsDeviceId, XsDevicePtr> m_connected_devices;
+      std::map<XsDeviceId, std::string> m_ids_to_labels;
 
       bool m_xsens_mtw_configured;
 
@@ -129,8 +128,8 @@ namespace hiros {
       const XsDataPacket* m_packet;
       ros::Time m_sample_time;
 
-      std::vector<XsTimeStamp> m_prev_packet_time_of_arrival;
-      std::vector<ros::Time> m_prev_packet_sample_time;
+      std::map<XsDeviceId, XsTimeStamp> m_prev_packet_time_of_arrival;
+      std::map<XsDeviceId, ros::Time> m_prev_packet_sample_time;
 
       std::vector<ros::Publisher> m_imu_pub;
       std::vector<ros::Publisher> m_acceleration_pub;

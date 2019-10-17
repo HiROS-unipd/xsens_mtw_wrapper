@@ -54,7 +54,7 @@ void hiros::xsens_mtw::Wrapper::start()
   } while (!startMeasurement());
 
   setSampleTimeEpsilon();
-  initializeVectors();
+  initializeTimeMaps();
   setupRosTopics();
 }
 
@@ -181,7 +181,8 @@ void hiros::xsens_mtw::Wrapper::configureWrapper()
     if (m_nh.getParam("sensor_labels", xml_sensor_labels)) {
 
       for (int i = 0; i < xml_sensor_labels.size(); ++i) {
-        m_ids_to_labels.emplace(xml_sensor_labels[i]["imu_id"], xml_sensor_labels[i]["label"]);
+        m_ids_to_labels.emplace(utils::string_to_xsdeviceid(xml_sensor_labels[i]["imu_id"]),
+                                xml_sensor_labels[i]["label"]);
       }
     }
   }
@@ -228,8 +229,7 @@ void hiros::xsens_mtw::Wrapper::stopXsensMtw()
   m_mtw_callbacks.clear();
 
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Clearing MTW devices");
-  m_mtw_devices.clear();
-  m_mtw_device_ids.clear();
+  m_connected_devices.clear();
 }
 
 void hiros::xsens_mtw::Wrapper::stopWrapper()
@@ -299,6 +299,9 @@ void hiros::xsens_mtw::Wrapper::stopWrapper()
       }
     }
   }
+
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Clearing label maps");
+  m_ids_to_labels.clear();
 }
 
 bool hiros::xsens_mtw::Wrapper::waitMtwConnection()
@@ -324,18 +327,14 @@ bool hiros::xsens_mtw::Wrapper::getMtwsDeviceIstances()
 
   for (auto& xs_device_id : m_control->deviceIds()) {
     if (xs_device_id.isMtw()) {
-      m_mtw_device_ids.push_back(xs_device_id);
-    }
-  }
-
-  for (auto& mtw_device_id : m_mtw_device_ids) {
-    XsDevicePtr mtw_device = m_control->device(mtw_device_id);
-    if (mtw_device != nullptr) {
-      m_mtw_devices.push_back(mtw_device);
-    }
-    else {
-      ROS_FATAL_STREAM("Xsens Mtw Wrapper... Failed to create an MTW XsDevice instance");
-      return false;
+      XsDevicePtr xs_device = m_control->device(xs_device_id);
+      if (xs_device != nullptr) {
+        m_connected_devices.emplace(xs_device_id, xs_device);
+      }
+      else {
+        ROS_FATAL_STREAM("Xsens Mtw Wrapper... Failed to create an MTW XsDevice instance");
+        return false;
+      }
     }
   }
 
@@ -346,10 +345,10 @@ void hiros::xsens_mtw::Wrapper::attachCallbackHandlers()
 {
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Attaching callback handlers to MTWs");
 
-  m_mtw_callbacks.resize(m_mtw_devices.size());
-  for (size_t i = 0; i < m_mtw_devices.size(); ++i) {
-    m_mtw_callbacks.at(i) = new MtwCallback(static_cast<int>(i), m_mtw_devices.at(i));
-    m_mtw_devices.at(i)->addCallbackHandler(m_mtw_callbacks.at(i));
+  int mtw_index = 0;
+  for (auto& device : m_connected_devices) {
+    m_mtw_callbacks.push_back(new MtwCallback(mtw_index++, device.second));
+    device.second->addCallbackHandler(m_mtw_callbacks.back());
   }
 }
 
@@ -529,62 +528,63 @@ bool hiros::xsens_mtw::Wrapper::disableRadio()
   return true;
 }
 
-void hiros::xsens_mtw::Wrapper::initializeVectors()
+void hiros::xsens_mtw::Wrapper::initializeTimeMaps()
 {
-  m_prev_packet_time_of_arrival.resize(m_number_of_connected_mtws, 0);
-  m_prev_packet_sample_time.resize(m_number_of_connected_mtws, ros::Time(0));
+  for (auto& device : m_connected_devices) {
+    m_prev_packet_time_of_arrival.emplace(device.first, 0);
+    m_prev_packet_sample_time.emplace(device.first, ros::Time(0));
+  }
 }
 
 void hiros::xsens_mtw::Wrapper::setupRosTopics()
 {
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Setting up ROS topics");
 
-  for (auto& device_id : m_mtw_device_ids) {
+  for (auto& device : m_connected_devices) {
     if (m_wrapper_params.publish_imu) {
-      m_imu_pub.push_back(m_nh.advertise<sensor_msgs::Imu>(composeTopicPrefix(device_id) + "/imu/data", 1));
+      m_imu_pub.push_back(m_nh.advertise<sensor_msgs::Imu>(composeTopicPrefix(device.first) + "/imu/data", 1));
     }
 
     if (m_wrapper_params.publish_acceleration) {
       m_acceleration_pub.push_back(
-        m_nh.advertise<geometry_msgs::Vector3Stamped>(composeTopicPrefix(device_id) + "/imu/acceleration", 1));
+        m_nh.advertise<geometry_msgs::Vector3Stamped>(composeTopicPrefix(device.first) + "/imu/acceleration", 1));
     }
 
     if (m_wrapper_params.publish_angular_velocity) {
       m_angular_velocity_pub.push_back(
-        m_nh.advertise<geometry_msgs::Vector3Stamped>(composeTopicPrefix(device_id) + "/imu/angular_velocity", 1));
+        m_nh.advertise<geometry_msgs::Vector3Stamped>(composeTopicPrefix(device.first) + "/imu/angular_velocity", 1));
     }
 
     if (m_wrapper_params.publish_mag) {
-      m_mag_pub.push_back(m_nh.advertise<sensor_msgs::MagneticField>(composeTopicPrefix(device_id) + "/imu/mag", 1));
+      m_mag_pub.push_back(m_nh.advertise<sensor_msgs::MagneticField>(composeTopicPrefix(device.first) + "/imu/mag", 1));
     }
 
     if (m_wrapper_params.publish_euler) {
       m_euler_pub.push_back(
-        m_nh.advertise<hiros_xsens_mtw_wrapper::Euler>(composeTopicPrefix(device_id) + "/imu/euler", 1));
+        m_nh.advertise<hiros_xsens_mtw_wrapper::Euler>(composeTopicPrefix(device.first) + "/imu/euler", 1));
     }
 
     if (m_wrapper_params.publish_quaternion) {
       m_quaternion_pub.push_back(
-        m_nh.advertise<geometry_msgs::QuaternionStamped>(composeTopicPrefix(device_id) + "/filter/quaternion", 1));
+        m_nh.advertise<geometry_msgs::QuaternionStamped>(composeTopicPrefix(device.first) + "/filter/quaternion", 1));
     }
 
     if (m_wrapper_params.publish_free_acceleration) {
-      m_free_acceleration_pub.push_back(
-        m_nh.advertise<geometry_msgs::Vector3Stamped>(composeTopicPrefix(device_id) + "/filter/free_acceleration", 1));
+      m_free_acceleration_pub.push_back(m_nh.advertise<geometry_msgs::Vector3Stamped>(
+        composeTopicPrefix(device.first) + "/filter/free_acceleration", 1));
     }
 
     if (m_wrapper_params.publish_pressure) {
       m_pressure_pub.push_back(
-        m_nh.advertise<sensor_msgs::FluidPressure>(composeTopicPrefix(device_id) + "/pressure", 1));
+        m_nh.advertise<sensor_msgs::FluidPressure>(composeTopicPrefix(device.first) + "/pressure", 1));
     }
   }
 }
 
 std::string hiros::xsens_mtw::Wrapper::getDeviceLabel(const XsDeviceId& t_id) const
 {
-  return (m_ids_to_labels.find(t_id.toString().toStdString()) != m_ids_to_labels.end())
-           ? m_ids_to_labels.at(t_id.toString().toStdString())
-           : t_id.toString().toStdString();
+  return (m_ids_to_labels.find(t_id) != m_ids_to_labels.end()) ? m_ids_to_labels.at(t_id)
+                                                               : t_id.toString().toStdString();
 }
 
 std::string hiros::xsens_mtw::Wrapper::composeTopicPrefix(const XsDeviceId& t_id) const
@@ -594,25 +594,22 @@ std::string hiros::xsens_mtw::Wrapper::composeTopicPrefix(const XsDeviceId& t_id
 
 void hiros::xsens_mtw::Wrapper::computeSampleTime()
 {
-  size_t mtw_device_index = static_cast<size_t>(std::distance(
-    m_mtw_device_ids.begin(), std::find(m_mtw_device_ids.begin(), m_mtw_device_ids.end(), m_packet->deviceId())));
-
   double delta_time_of_arrival =
-    (m_packet->timeOfArrival() - m_prev_packet_time_of_arrival.at(mtw_device_index)).secTime();
+    (m_packet->timeOfArrival() - m_prev_packet_time_of_arrival.at(m_packet->deviceId())).secTime();
 
   // same timeOfArrival
   if (delta_time_of_arrival < (0.5 / m_update_rate)) {
-    m_sample_time = m_prev_packet_sample_time.at(mtw_device_index) + ros::Duration(1.0 / m_update_rate);
+    m_sample_time = m_prev_packet_sample_time.at(m_packet->deviceId()) + ros::Duration(1.0 / m_update_rate);
   }
   // new timeOfArrival
   else {
-    m_sample_time = (m_packet->timeOfArrival().secTime() > m_prev_packet_sample_time.at(mtw_device_index).toSec())
+    m_sample_time = (m_packet->timeOfArrival().secTime() > m_prev_packet_sample_time.at(m_packet->deviceId()).toSec())
                       ? ros::Time(m_packet->timeOfArrival().secTime())
-                      : ros::Time(m_prev_packet_sample_time.at(mtw_device_index).toSec() + m_sample_time_epsilon);
+                      : ros::Time(m_prev_packet_sample_time.at(m_packet->deviceId()).toSec() + m_sample_time_epsilon);
   }
 
-  m_prev_packet_time_of_arrival.at(mtw_device_index) = m_packet->timeOfArrival();
-  m_prev_packet_sample_time.at(mtw_device_index) = m_sample_time;
+  m_prev_packet_time_of_arrival.at(m_packet->deviceId()) = m_packet->timeOfArrival();
+  m_prev_packet_sample_time.at(m_packet->deviceId()) = m_sample_time;
 }
 
 sensor_msgs::Imu hiros::xsens_mtw::Wrapper::getImuMsg() const
