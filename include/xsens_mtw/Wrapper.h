@@ -15,6 +15,7 @@
 
 // Internal dependencies
 #include "hiros_xsens_mtw_wrapper/Euler.h"
+#include "hiros_xsens_mtw_wrapper/ResetOrientation.h"
 #include "xsens_mtw/MtwCallback.h"
 #include "xsens_mtw/WirelessMasterCallback.h"
 
@@ -82,8 +83,9 @@ namespace hiros {
 
       inline void setSampleTimeEpsilon() { m_sample_time_epsilon = (0.5 / m_update_rate); }
       void initializeTimeMaps();
-      void setupRosTopics();
+      void setupRos();
       std::string getDeviceLabel(const XsDeviceId& t_id) const;
+      XsDeviceId getDeviceId(const std::string t_label) const;
       std::string composeTopicPrefix(const XsDeviceId& t_id) const;
       void computeSampleTime();
 
@@ -96,6 +98,9 @@ namespace hiros {
       geometry_msgs::Vector3Stamped getFreeAccelerationMsg() const;
       sensor_msgs::FluidPressure getPressureMsg() const;
       geometry_msgs::TransformStamped getTf() const;
+
+      bool resetOrientation(hiros_xsens_mtw_wrapper::ResetOrientation::Request& t_req,
+                            hiros_xsens_mtw_wrapper::ResetOrientation::Response& t_res);
 
       static inline void sighandler(int t_sig) { s_request_shutdown = (t_sig == SIGINT); };
 
@@ -119,6 +124,7 @@ namespace hiros {
 
       std::map<XsDeviceId, XsDevicePtr> m_connected_devices;
       std::map<XsDeviceId, std::string> m_ids_to_labels;
+      std::map<std::string, XsDeviceId> m_labels_to_ids;
 
       bool m_xsens_mtw_configured;
 
@@ -131,6 +137,7 @@ namespace hiros {
       std::map<XsDeviceId, XsTimeStamp> m_prev_packet_time_of_arrival;
       std::map<XsDeviceId, ros::Time> m_prev_packet_sample_time;
 
+      ros::ServiceServer m_reset_orientation_srv;
       std::vector<ros::Publisher> m_imu_pub;
       std::vector<ros::Publisher> m_acceleration_pub;
       std::vector<ros::Publisher> m_angular_velocity_pub;

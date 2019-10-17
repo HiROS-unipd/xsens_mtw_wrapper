@@ -55,7 +55,7 @@ void hiros::xsens_mtw::Wrapper::start()
 
   setSampleTimeEpsilon();
   initializeTimeMaps();
-  setupRosTopics();
+  setupRos();
 }
 
 void hiros::xsens_mtw::Wrapper::run()
@@ -183,6 +183,8 @@ void hiros::xsens_mtw::Wrapper::configureWrapper()
       for (int i = 0; i < xml_sensor_labels.size(); ++i) {
         m_ids_to_labels.emplace(utils::string_to_xsdeviceid(xml_sensor_labels[i]["imu_id"]),
                                 xml_sensor_labels[i]["label"]);
+        m_labels_to_ids.emplace(xml_sensor_labels[i]["label"],
+                                utils::string_to_xsdeviceid(xml_sensor_labels[i]["imu_id"]));
       }
     }
   }
@@ -300,8 +302,12 @@ void hiros::xsens_mtw::Wrapper::stopWrapper()
     }
   }
 
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Shutting down ROS service server");
+  m_reset_orientation_srv.shutdown();
+
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Clearing label maps");
   m_ids_to_labels.clear();
+  m_labels_to_ids.clear();
 }
 
 bool hiros::xsens_mtw::Wrapper::waitMtwConnection()
@@ -536,9 +542,11 @@ void hiros::xsens_mtw::Wrapper::initializeTimeMaps()
   }
 }
 
-void hiros::xsens_mtw::Wrapper::setupRosTopics()
+void hiros::xsens_mtw::Wrapper::setupRos()
 {
-  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Setting up ROS topics");
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Setting up ROS");
+
+  m_reset_orientation_srv = m_nh.advertiseService("reset_orientation", &Wrapper::resetOrientation, this);
 
   for (auto& device : m_connected_devices) {
     if (m_wrapper_params.publish_imu) {
@@ -585,6 +593,12 @@ std::string hiros::xsens_mtw::Wrapper::getDeviceLabel(const XsDeviceId& t_id) co
 {
   return (m_ids_to_labels.find(t_id) != m_ids_to_labels.end()) ? m_ids_to_labels.at(t_id)
                                                                : t_id.toString().toStdString();
+}
+
+XsDeviceId hiros::xsens_mtw::Wrapper::getDeviceId(const std::string t_label) const
+{
+  return (m_labels_to_ids.find(t_label) != m_labels_to_ids.end()) ? m_labels_to_ids.at(t_label)
+                                                                  : utils::string_to_xsdeviceid(t_label);
 }
 
 std::string hiros::xsens_mtw::Wrapper::composeTopicPrefix(const XsDeviceId& t_id) const
@@ -823,4 +837,33 @@ geometry_msgs::TransformStamped hiros::xsens_mtw::Wrapper::getTf() const
   tf.transform.rotation.w = m_packet->orientationQuaternion().w();
 
   return tf;
+}
+
+bool hiros::xsens_mtw::Wrapper::resetOrientation(hiros_xsens_mtw_wrapper::ResetOrientation::Request& t_req,
+                                                 hiros_xsens_mtw_wrapper::ResetOrientation::Response& t_res)
+{
+  bool success = true;
+
+  if (t_req.sensors.empty()) {
+    ROS_INFO_STREAM(BASH_MSG_GREEN << "Xsens Mtw Wrapper... Resetting orientation of all connected sensors"
+                                   << BASH_MSG_RESET);
+    for (auto& device : m_connected_devices) {
+      success = device.second->resetOrientation(XRM_Alignment) && success;
+    }
+  }
+  else {
+    for (auto& sensor_label : t_req.sensors) {
+      if (m_connected_devices.find(getDeviceId(sensor_label)) != m_connected_devices.end()) {
+        ROS_INFO_STREAM(BASH_MSG_GREEN << "Xsens Mtw Wrapper... Resetting orientation of '" << sensor_label << "'"
+                                       << BASH_MSG_RESET);
+        success = m_connected_devices.at(getDeviceId(sensor_label))->resetOrientation(XRM_Alignment) && success;
+      }
+      else {
+        ROS_WARN_STREAM("Xsens Mtw Wrapper... Cannot find '" << sensor_label << "'");
+        success = false;
+      }
+    }
+  }
+
+  return success;
 }
