@@ -31,10 +31,10 @@ XsDevice const& hiros::xsens_mtw::MtwCallback::device() const
   return *m_device;
 }
 
-void hiros::xsens_mtw::MtwCallback::onLiveDataAvailable(XsDevice* t_device, const XsDataPacket* packet)
+void hiros::xsens_mtw::MtwCallback::onLiveDataAvailable(XsDevice* t_device, const XsDataPacket* t_packet)
 {
   XsMutexLocker lock(m_mutex);
-  m_packet_buffer.push_back(*packet);
+  m_packet_buffer.push_back(*t_packet);
   if (m_packet_buffer.size() > 300) {
     deleteOldestPacket();
   }

@@ -22,11 +22,9 @@ namespace hiros {
       bool dataAvailable() const;
 
       XsDataPacket const* getOldestPacket() const;
-
       void deleteOldestPacket();
 
       inline int getMtwIndex() const { return m_mtw_index; }
-
       XsDevice const& device() const;
 
     protected:
