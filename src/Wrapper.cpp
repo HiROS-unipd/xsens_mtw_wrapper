@@ -181,10 +181,8 @@ void hiros::xsens_mtw::Wrapper::configureWrapper()
     if (m_nh.getParam("sensor_labels", xml_sensor_labels)) {
 
       for (int i = 0; i < xml_sensor_labels.size(); ++i) {
-        m_ids_to_labels.emplace(utils::string_to_xsdeviceid(xml_sensor_labels[i]["imu_id"]),
-                                xml_sensor_labels[i]["label"]);
-        m_labels_to_ids.emplace(xml_sensor_labels[i]["label"],
-                                utils::string_to_xsdeviceid(xml_sensor_labels[i]["imu_id"]));
+        m_ids_to_labels.emplace(utils::toXsDeviceId(xml_sensor_labels[i]["imu_id"]), xml_sensor_labels[i]["label"]);
+        m_labels_to_ids.emplace(xml_sensor_labels[i]["label"], utils::toXsDeviceId(xml_sensor_labels[i]["imu_id"]));
       }
     }
   }
@@ -598,7 +596,7 @@ std::string hiros::xsens_mtw::Wrapper::getDeviceLabel(const XsDeviceId& t_id) co
 XsDeviceId hiros::xsens_mtw::Wrapper::getDeviceId(const std::string t_label) const
 {
   return (m_labels_to_ids.find(t_label) != m_labels_to_ids.end()) ? m_labels_to_ids.at(t_label)
-                                                                  : utils::string_to_xsdeviceid(t_label);
+                                                                  : utils::toXsDeviceId(t_label);
 }
 
 std::string hiros::xsens_mtw::Wrapper::composeTopicPrefix(const XsDeviceId& t_id) const

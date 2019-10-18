@@ -30,7 +30,7 @@ std::string hiros::xsens_mtw::utils::toString(const XsDevice& t_d)
   return ("ID: " + t_d.deviceId().toString().toStdString() + " (" + t_d.productCode().toStdString() + ")");
 }
 
-XsDeviceId hiros::xsens_mtw::utils::string_to_xsdeviceid(const std::string t_string)
+XsDeviceId hiros::xsens_mtw::utils::toXsDeviceId(const std::string t_string)
 {
   try {
     return XsDeviceId(static_cast<unsigned int>(std::stoi(t_string, nullptr, 16)));
