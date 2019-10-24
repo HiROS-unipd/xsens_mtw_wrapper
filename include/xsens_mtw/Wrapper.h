@@ -29,6 +29,8 @@ namespace hiros {
     {
       int desired_update_rate;
       int desired_radio_channel;
+
+      bool reset_initial_orientation;
     };
 
     struct WrapperParameters
@@ -84,6 +86,7 @@ namespace hiros {
       inline void setSampleTimeEpsilon() { m_sample_time_epsilon = (0.5 / m_update_rate); }
       void initializeTimeMaps();
       void setupRos();
+      bool resetInitialOrientation() const;
       std::string getDeviceLabel(const XsDeviceId& t_id) const;
       XsDeviceId getDeviceId(const std::string t_label) const;
       std::string composeTopicPrefix(const XsDeviceId& t_id) const;

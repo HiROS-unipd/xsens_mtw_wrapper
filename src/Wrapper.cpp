@@ -56,6 +56,10 @@ void hiros::xsens_mtw::Wrapper::start()
   setSampleTimeEpsilon();
   initializeTimeMaps();
   setupRos();
+
+  if (m_mtw_params.reset_initial_orientation) {
+    resetInitialOrientation();
+  }
 }
 
 void hiros::xsens_mtw::Wrapper::run()
@@ -152,6 +156,8 @@ void hiros::xsens_mtw::Wrapper::configureWrapper()
 
   m_nh.getParam("desired_update_rate", m_mtw_params.desired_update_rate);
   m_nh.getParam("desired_radio_channel", m_mtw_params.desired_radio_channel);
+
+  m_nh.getParam("reset_initial_orientation", m_mtw_params.reset_initial_orientation);
 
   m_nh.getParam("enable_custom_labeling", m_wrapper_params.enable_custom_labeling);
 
@@ -585,6 +591,23 @@ void hiros::xsens_mtw::Wrapper::setupRos()
         m_nh.advertise<sensor_msgs::FluidPressure>(composeTopicPrefix(device.first) + "/pressure", 1));
     }
   }
+}
+
+bool hiros::xsens_mtw::Wrapper::resetInitialOrientation() const
+{
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Resetting initial orientation");
+
+  bool success = true;
+
+  for (auto& device : m_connected_devices) {
+    success = device.second->resetOrientation(XRM_Heading) && success;
+  }
+
+  if (!success) {
+    ROS_FATAL_STREAM("Xsens Mtw Wrapper... Failed to reset initial orientation");
+  }
+
+  return success;
 }
 
 std::string hiros::xsens_mtw::Wrapper::getDeviceLabel(const XsDeviceId& t_id) const

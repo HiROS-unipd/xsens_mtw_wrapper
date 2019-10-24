@@ -7,6 +7,7 @@
   <arg name="desired_update_rate"       default="100"       />
   <arg name="desired_radio_channel"     default="19"        />
 
+  <arg name="reset_initial_orientation" default="false"     />
   <arg name="enable_custom_labeling"    default="false"     />
 
   <arg name="publish_imu"               default="true"      />
@@ -27,6 +28,7 @@
     <param name="desired_update_rate"       type="int"  value="$(arg desired_update_rate)"       />
     <param name="desired_radio_channel"     type="int"  value="$(arg desired_radio_channel)"     />
 
+    <param name="reset_initial_orientation" type="bool" value="$(arg reset_initial_orientation)" />
     <param name="enable_custom_labeling"    type="bool" value="$(arg enable_custom_labeling)"    />
 
     <param name="publish_imu"               type="bool" value="$(arg publish_imu)"               />
