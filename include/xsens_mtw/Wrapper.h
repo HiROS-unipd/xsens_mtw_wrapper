@@ -83,14 +83,15 @@ namespace hiros {
       bool setRadioChannel();
       bool disableRadio();
 
-      inline void setSampleTimeEpsilon() { m_sample_time_epsilon = (0.5 / m_update_rate); }
-      void initializeTimeMaps();
+      void initializeMaps();
       void setupRos();
       bool resetInitialOrientation() const;
       std::string getDeviceLabel(const XsDeviceId& t_id) const;
       XsDeviceId getDeviceId(const std::string t_label) const;
       std::string composeTopicPrefix(const XsDeviceId& t_id) const;
-      void computeSampleTime();
+
+      void updatePacketBuffer(const XsDeviceId& t_id);
+      void computeSampleTime(const size_t& t_packet_index);
 
       void publishData(const XsDataPacket*& t_packet);
       sensor_msgs::Imu getImuMsg(const XsDataPacket*& t_packet) const;
@@ -108,6 +109,8 @@ namespace hiros {
 
       static inline void sighandler(int t_sig) { s_request_shutdown = (t_sig == SIGINT); };
 
+      const double m_toa_threshold = 0.2;
+
       XsensMtwParameters m_mtw_params;
       WrapperParameters m_wrapper_params;
 
@@ -121,7 +124,6 @@ namespace hiros {
 
       XsIntArray m_supported_update_rates;
       int m_update_rate;
-      double m_sample_time_epsilon;
 
       const unsigned int m_connection_timeout = 5000; // [ms]
       unsigned long m_number_of_connected_mtws;
@@ -135,11 +137,12 @@ namespace hiros {
       ros::NodeHandle m_nh;
       std::string m_node_namespace;
 
-      const XsDataPacket* m_packet;
-      std::map<XsDeviceId, ros::Time> m_sample_time;
+      const XsDataPacket* m_latest_packet;
 
-      std::map<XsDeviceId, XsTimeStamp> m_prev_packet_time_of_arrival;
-      std::map<XsDeviceId, ros::Time> m_prev_packet_sample_time;
+      std::map<XsDeviceId, XsTimeStamp> m_second_prev_packet_toa;
+      std::map<XsDeviceId, XsTimeStamp> m_prev_packet_toa;
+      std::map<XsDeviceId, ros::Time> m_sample_time;
+      std::map<XsDeviceId, std::vector<const XsDataPacket*>> m_packet_buffer;
 
       ros::ServiceServer m_reset_orientation_srv;
       std::map<XsDeviceId, ros::Publisher> m_imu_pubs;
