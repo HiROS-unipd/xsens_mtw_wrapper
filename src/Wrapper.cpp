@@ -758,9 +758,9 @@ sensor_msgs::MagneticField hiros::xsens_mtw::Wrapper::getMagMsg() const
   out_msg.header.frame_id = getDeviceLabel(m_packet->deviceId());
 
   if (m_packet->containsCalibratedMagneticField()) {
-    out_msg.magnetic_field.x = m_packet->calibratedMagneticField().at(0);
-    out_msg.magnetic_field.y = m_packet->calibratedMagneticField().at(1);
-    out_msg.magnetic_field.z = m_packet->calibratedMagneticField().at(2);
+    out_msg.magnetic_field.x = m_packet->calibratedMagneticField().at(0) * 1e-4; // G to T
+    out_msg.magnetic_field.y = m_packet->calibratedMagneticField().at(1) * 1e-4; // G to T
+    out_msg.magnetic_field.z = m_packet->calibratedMagneticField().at(2) * 1e-4; // G to T
     out_msg.magnetic_field_covariance.front() = 0.0;
   }
   else {
