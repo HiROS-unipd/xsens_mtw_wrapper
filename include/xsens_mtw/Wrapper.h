@@ -92,16 +92,16 @@ namespace hiros {
       std::string composeTopicPrefix(const XsDeviceId& t_id) const;
       void computeSampleTime();
 
-      void publishData();
-      sensor_msgs::Imu getImuMsg() const;
-      geometry_msgs::Vector3Stamped getAccelerationMsg() const;
-      geometry_msgs::Vector3Stamped getAngularVelocityMsg() const;
-      sensor_msgs::MagneticField getMagMsg() const;
-      hiros_xsens_mtw_wrapper::Euler getEulerMsg() const;
-      geometry_msgs::QuaternionStamped getQuaternionMsg() const;
-      geometry_msgs::Vector3Stamped getFreeAccelerationMsg() const;
-      sensor_msgs::FluidPressure getPressureMsg() const;
-      geometry_msgs::TransformStamped getTf() const;
+      void publishData(const XsDataPacket*& t_packet);
+      sensor_msgs::Imu getImuMsg(const XsDataPacket*& t_packet) const;
+      geometry_msgs::Vector3Stamped getAccelerationMsg(const XsDataPacket*& t_packet) const;
+      geometry_msgs::Vector3Stamped getAngularVelocityMsg(const XsDataPacket*& t_packet) const;
+      sensor_msgs::MagneticField getMagMsg(const XsDataPacket*& t_packet) const;
+      hiros_xsens_mtw_wrapper::Euler getEulerMsg(const XsDataPacket*& t_packet) const;
+      geometry_msgs::QuaternionStamped getQuaternionMsg(const XsDataPacket*& t_packet) const;
+      geometry_msgs::Vector3Stamped getFreeAccelerationMsg(const XsDataPacket*& t_packet) const;
+      sensor_msgs::FluidPressure getPressureMsg(const XsDataPacket*& t_packet) const;
+      geometry_msgs::TransformStamped getTf(const XsDataPacket*& t_packet) const;
 
       bool resetOrientation(hiros_xsens_mtw_wrapper::ResetOrientation::Request& t_req,
                             hiros_xsens_mtw_wrapper::ResetOrientation::Response& t_res);
