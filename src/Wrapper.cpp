@@ -67,41 +67,41 @@ void hiros::xsens_mtw::Wrapper::run()
   ROS_INFO_STREAM(BASH_MSG_GREEN << "Xsens Mtw Wrapper... RUNNING" << BASH_MSG_RESET);
 
   while (ros::ok() && !s_request_shutdown) {
-    for (size_t i = 0; i < m_number_of_connected_mtws; ++i) {
-      if (m_mtw_callbacks.at(i)->dataAvailable()) {
-        m_packet = m_mtw_callbacks.at(i)->getOldestPacket();
+    for (auto& device : m_connected_devices) {
+      if (m_mtw_callbacks.at(device.first)->dataAvailable()) {
+        m_packet = m_mtw_callbacks.at(device.first)->getOldestPacket();
         computeSampleTime();
 
         if (m_wrapper_params.publish_imu) {
-          m_imu_pub.at(i).publish(getImuMsg());
+          m_imu_pubs.at(device.first).publish(getImuMsg());
         }
 
         if (m_wrapper_params.publish_acceleration) {
-          m_acceleration_pub.at(i).publish(getAccelerationMsg());
+          m_acceleration_pubs.at(device.first).publish(getAccelerationMsg());
         }
 
         if (m_wrapper_params.publish_angular_velocity) {
-          m_angular_velocity_pub.at(i).publish(getAngularVelocityMsg());
+          m_angular_velocity_pubs.at(device.first).publish(getAngularVelocityMsg());
         }
 
         if (m_wrapper_params.publish_mag) {
-          m_mag_pub.at(i).publish(getMagMsg());
+          m_mag_pubs.at(device.first).publish(getMagMsg());
         }
 
         if (m_wrapper_params.publish_euler) {
-          m_euler_pub.at(i).publish(getEulerMsg());
+          m_euler_pubs.at(device.first).publish(getEulerMsg());
         }
 
         if (m_wrapper_params.publish_quaternion) {
-          m_quaternion_pub.at(i).publish(getQuaternionMsg());
+          m_quaternion_pubs.at(device.first).publish(getQuaternionMsg());
         }
 
         if (m_wrapper_params.publish_free_acceleration) {
-          m_free_acceleration_pub.at(i).publish(getFreeAccelerationMsg());
+          m_free_acceleration_pubs.at(device.first).publish(getFreeAccelerationMsg());
         }
 
         if (m_wrapper_params.publish_pressure) {
-          m_pressure_pub.at(i).publish(getPressureMsg());
+          m_pressure_pubs.at(device.first).publish(getPressureMsg());
         }
 
         if (m_wrapper_params.publish_tf) {
@@ -110,7 +110,7 @@ void hiros::xsens_mtw::Wrapper::run()
           }
         }
 
-        m_mtw_callbacks.at(i)->deleteOldestPacket();
+        m_mtw_callbacks.at(device.first)->deleteOldestPacket();
         ros::spinOnce();
       }
     }
@@ -230,7 +230,7 @@ void hiros::xsens_mtw::Wrapper::stopXsensMtw()
 
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Deleting MTW callbacks");
   for (auto& mtw_callback : m_mtw_callbacks) {
-    delete (mtw_callback);
+    delete (mtw_callback.second);
   }
   m_mtw_callbacks.clear();
 
@@ -243,65 +243,65 @@ void hiros::xsens_mtw::Wrapper::stopWrapper()
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Shutting down ROS publishers");
 
   if (m_wrapper_params.publish_imu) {
-    for (auto& pub : m_imu_pub) {
-      if (pub) {
-        pub.shutdown();
+    for (auto& pub : m_imu_pubs) {
+      if (pub.second) {
+        pub.second.shutdown();
       }
     }
   }
 
   if (m_wrapper_params.publish_acceleration) {
-    for (auto& pub : m_acceleration_pub) {
-      if (pub) {
-        pub.shutdown();
+    for (auto& pub : m_acceleration_pubs) {
+      if (pub.second) {
+        pub.second.shutdown();
       }
     }
   }
 
   if (m_wrapper_params.publish_angular_velocity) {
-    for (auto& pub : m_angular_velocity_pub) {
-      if (pub) {
-        pub.shutdown();
+    for (auto& pub : m_angular_velocity_pubs) {
+      if (pub.second) {
+        pub.second.shutdown();
       }
     }
   }
 
   if (m_wrapper_params.publish_mag) {
-    for (auto& pub : m_mag_pub) {
-      if (pub) {
-        pub.shutdown();
+    for (auto& pub : m_mag_pubs) {
+      if (pub.second) {
+        pub.second.shutdown();
       }
     }
   }
 
   if (m_wrapper_params.publish_euler) {
-    for (auto& pub : m_euler_pub) {
-      if (pub) {
-        pub.shutdown();
+    for (auto& pub : m_euler_pubs) {
+      if (pub.second) {
+        pub.second.shutdown();
       }
     }
   }
 
   if (m_wrapper_params.publish_quaternion) {
-    for (auto& pub : m_quaternion_pub) {
-      if (pub) {
-        pub.shutdown();
+    for (auto& pub : m_quaternion_pubs) {
+      if (pub.second) {
+        pub.second.shutdown();
       }
     }
   }
 
   if (m_wrapper_params.publish_free_acceleration) {
-    for (auto& pub : m_free_acceleration_pub) {
-      if (pub) {
-        pub.shutdown();
+    for (auto& pub : m_free_acceleration_pubs) {
+      if (pub.second) {
+        pub.second.shutdown();
       }
     }
   }
 
   if (m_wrapper_params.publish_pressure) {
-    for (auto& pub : m_pressure_pub) {
-      if (pub) {
-        pub.shutdown();
+    for (auto& pub : m_pressure_pubs) {
+      if (pub.second) {
+        pub.second.shutdown();
       }
     }
   }
@@ -357,8 +357,8 @@ void hiros::xsens_mtw::Wrapper::attachCallbackHandlers()
 
   int mtw_index = 0;
   for (auto& device : m_connected_devices) {
-    m_mtw_callbacks.push_back(new MtwCallback(mtw_index++, device.second));
-    device.second->addCallbackHandler(m_mtw_callbacks.back());
+    m_mtw_callbacks.emplace(device.first, new MtwCallback(mtw_index++, device.second));
+    device.second->addCallbackHandler(m_mtw_callbacks.at(device.first));
   }
 }
 
@@ -541,6 +541,7 @@ bool hiros::xsens_mtw::Wrapper::disableRadio()
 void hiros::xsens_mtw::Wrapper::initializeTimeMaps()
 {
   for (auto& device : m_connected_devices) {
+    m_sample_time.emplace(device.first, ros::Time(0));
     m_prev_packet_time_of_arrival.emplace(device.first, 0);
     m_prev_packet_sample_time.emplace(device.first, ros::Time(0));
   }
@@ -554,41 +555,48 @@ void hiros::xsens_mtw::Wrapper::setupRos()
 
   for (auto& device : m_connected_devices) {
     if (m_wrapper_params.publish_imu) {
-      m_imu_pub.push_back(m_nh.advertise<sensor_msgs::Imu>(composeTopicPrefix(device.first) + "/imu/data", 1));
+      m_imu_pubs.emplace(device.first,
+                         m_nh.advertise<sensor_msgs::Imu>(composeTopicPrefix(device.first) + "/imu/data", 1));
     }
 
     if (m_wrapper_params.publish_acceleration) {
-      m_acceleration_pub.push_back(
+      m_acceleration_pubs.emplace(
+        device.first,
         m_nh.advertise<geometry_msgs::Vector3Stamped>(composeTopicPrefix(device.first) + "/imu/acceleration", 1));
     }
 
     if (m_wrapper_params.publish_angular_velocity) {
-      m_angular_velocity_pub.push_back(
+      m_angular_velocity_pubs.emplace(
+        device.first,
         m_nh.advertise<geometry_msgs::Vector3Stamped>(composeTopicPrefix(device.first) + "/imu/angular_velocity", 1));
     }
 
     if (m_wrapper_params.publish_mag) {
-      m_mag_pub.push_back(m_nh.advertise<sensor_msgs::MagneticField>(composeTopicPrefix(device.first) + "/imu/mag", 1));
+      m_mag_pubs.emplace(device.first,
+                         m_nh.advertise<sensor_msgs::MagneticField>(composeTopicPrefix(device.first) + "/imu/mag", 1));
     }
 
     if (m_wrapper_params.publish_euler) {
-      m_euler_pub.push_back(
+      m_euler_pubs.emplace(
+        device.first,
         m_nh.advertise<hiros_xsens_mtw_wrapper::Euler>(composeTopicPrefix(device.first) + "/imu/euler", 1));
     }
 
     if (m_wrapper_params.publish_quaternion) {
-      m_quaternion_pub.push_back(
+      m_quaternion_pubs.emplace(
+        device.first,
         m_nh.advertise<geometry_msgs::QuaternionStamped>(composeTopicPrefix(device.first) + "/filter/quaternion", 1));
     }
 
     if (m_wrapper_params.publish_free_acceleration) {
-      m_free_acceleration_pub.push_back(m_nh.advertise<geometry_msgs::Vector3Stamped>(
-        composeTopicPrefix(device.first) + "/filter/free_acceleration", 1));
+      m_free_acceleration_pubs.emplace(device.first,
+                                       m_nh.advertise<geometry_msgs::Vector3Stamped>(
+                                         composeTopicPrefix(device.first) + "/filter/free_acceleration", 1));
     }
 
     if (m_wrapper_params.publish_pressure) {
-      m_pressure_pub.push_back(
-        m_nh.advertise<sensor_msgs::FluidPressure>(composeTopicPrefix(device.first) + "/pressure", 1));
+      m_pressure_pubs.emplace(
+        device.first, m_nh.advertise<sensor_msgs::FluidPressure>(composeTopicPrefix(device.first) + "/pressure", 1));
     }
   }
 }
@@ -634,23 +642,25 @@ void hiros::xsens_mtw::Wrapper::computeSampleTime()
 
   // same timeOfArrival
   if (delta_time_of_arrival < (0.5 / m_update_rate)) {
-    m_sample_time = m_prev_packet_sample_time.at(m_packet->deviceId()) + ros::Duration(1.0 / m_update_rate);
+    m_sample_time.at(m_packet->deviceId()) =
+      m_prev_packet_sample_time.at(m_packet->deviceId()) + ros::Duration(1.0 / m_update_rate);
   }
   // new timeOfArrival
   else {
-    m_sample_time = (m_packet->timeOfArrival().secTime() > m_prev_packet_sample_time.at(m_packet->deviceId()).toSec())
-                      ? ros::Time(m_packet->timeOfArrival().secTime())
-                      : ros::Time(m_prev_packet_sample_time.at(m_packet->deviceId()).toSec() + m_sample_time_epsilon);
+    m_sample_time.at(m_packet->deviceId()) =
+      (m_packet->timeOfArrival().secTime() > m_prev_packet_sample_time.at(m_packet->deviceId()).toSec())
+        ? ros::Time(m_packet->timeOfArrival().secTime())
+        : ros::Time(m_prev_packet_sample_time.at(m_packet->deviceId()).toSec() + m_sample_time_epsilon);
   }
 
   m_prev_packet_time_of_arrival.at(m_packet->deviceId()) = m_packet->timeOfArrival();
-  m_prev_packet_sample_time.at(m_packet->deviceId()) = m_sample_time;
+  m_prev_packet_sample_time.at(m_packet->deviceId()) = m_sample_time.at(m_packet->deviceId());
 }
 
 sensor_msgs::Imu hiros::xsens_mtw::Wrapper::getImuMsg() const
 {
   sensor_msgs::Imu out_msg;
-  out_msg.header.stamp = m_sample_time;
+  out_msg.header.stamp = m_sample_time.at(m_packet->deviceId());
   out_msg.header.frame_id = getDeviceLabel(m_packet->deviceId());
 
   if (m_packet->containsOrientation()) {
@@ -700,7 +710,7 @@ sensor_msgs::Imu hiros::xsens_mtw::Wrapper::getImuMsg() const
 geometry_msgs::Vector3Stamped hiros::xsens_mtw::Wrapper::getAccelerationMsg() const
 {
   geometry_msgs::Vector3Stamped out_msg;
-  out_msg.header.stamp = m_sample_time;
+  out_msg.header.stamp = m_sample_time.at(m_packet->deviceId());
   out_msg.header.frame_id = getDeviceLabel(m_packet->deviceId());
 
   if (m_packet->containsCalibratedAcceleration()) {
@@ -720,7 +730,7 @@ geometry_msgs::Vector3Stamped hiros::xsens_mtw::Wrapper::getAccelerationMsg() co
 geometry_msgs::Vector3Stamped hiros::xsens_mtw::Wrapper::getAngularVelocityMsg() const
 {
   geometry_msgs::Vector3Stamped out_msg;
-  out_msg.header.stamp = m_sample_time;
+  out_msg.header.stamp = m_sample_time.at(m_packet->deviceId());
   out_msg.header.frame_id = getDeviceLabel(m_packet->deviceId());
 
   if (m_packet->containsCalibratedGyroscopeData()) {
@@ -740,7 +750,7 @@ geometry_msgs::Vector3Stamped hiros::xsens_mtw::Wrapper::getAngularVelocityMsg()
 sensor_msgs::MagneticField hiros::xsens_mtw::Wrapper::getMagMsg() const
 {
   sensor_msgs::MagneticField out_msg;
-  out_msg.header.stamp = m_sample_time;
+  out_msg.header.stamp = m_sample_time.at(m_packet->deviceId());
   out_msg.header.frame_id = getDeviceLabel(m_packet->deviceId());
 
   if (m_packet->containsCalibratedMagneticField()) {
@@ -762,7 +772,7 @@ sensor_msgs::MagneticField hiros::xsens_mtw::Wrapper::getMagMsg() const
 hiros_xsens_mtw_wrapper::Euler hiros::xsens_mtw::Wrapper::getEulerMsg() const
 {
   hiros_xsens_mtw_wrapper::Euler out_msg;
-  out_msg.header.stamp = m_sample_time;
+  out_msg.header.stamp = m_sample_time.at(m_packet->deviceId());
   out_msg.header.frame_id = getDeviceLabel(m_packet->deviceId());
 
   if (m_packet->containsOrientation()) {
@@ -785,7 +795,7 @@ hiros_xsens_mtw_wrapper::Euler hiros::xsens_mtw::Wrapper::getEulerMsg() const
 geometry_msgs::QuaternionStamped hiros::xsens_mtw::Wrapper::getQuaternionMsg() const
 {
   geometry_msgs::QuaternionStamped out_msg;
-  out_msg.header.stamp = m_sample_time;
+  out_msg.header.stamp = m_sample_time.at(m_packet->deviceId());
   out_msg.header.frame_id = getDeviceLabel(m_packet->deviceId());
 
   if (m_packet->containsOrientation()) {
@@ -807,7 +817,7 @@ geometry_msgs::QuaternionStamped hiros::xsens_mtw::Wrapper::getQuaternionMsg() c
 geometry_msgs::Vector3Stamped hiros::xsens_mtw::Wrapper::getFreeAccelerationMsg() const
 {
   geometry_msgs::Vector3Stamped out_msg;
-  out_msg.header.stamp = m_sample_time;
+  out_msg.header.stamp = m_sample_time.at(m_packet->deviceId());
   out_msg.header.frame_id = getDeviceLabel(m_packet->deviceId());
 
   if (m_packet->containsFreeAcceleration()) {
@@ -827,7 +837,7 @@ geometry_msgs::Vector3Stamped hiros::xsens_mtw::Wrapper::getFreeAccelerationMsg(
 sensor_msgs::FluidPressure hiros::xsens_mtw::Wrapper::getPressureMsg() const
 {
   sensor_msgs::FluidPressure out_msg;
-  out_msg.header.stamp = m_sample_time;
+  out_msg.header.stamp = m_sample_time.at(m_packet->deviceId());
   out_msg.header.frame_id = getDeviceLabel(m_packet->deviceId());
 
   if (m_packet->containsPressure()) {
@@ -845,7 +855,7 @@ sensor_msgs::FluidPressure hiros::xsens_mtw::Wrapper::getPressureMsg() const
 geometry_msgs::TransformStamped hiros::xsens_mtw::Wrapper::getTf() const
 {
   geometry_msgs::TransformStamped tf;
-  tf.header.stamp = m_sample_time;
+  tf.header.stamp = m_sample_time.at(m_packet->deviceId());
   tf.header.frame_id = "world";
   tf.child_frame_id = getDeviceLabel(m_packet->deviceId());
 

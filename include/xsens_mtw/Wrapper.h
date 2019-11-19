@@ -111,7 +111,7 @@ namespace hiros {
       WrapperParameters m_wrapper_params;
 
       WirelessMasterCallback m_wireless_master_callback;
-      std::vector<MtwCallback*> m_mtw_callbacks;
+      std::map<XsDeviceId, MtwCallback*> m_mtw_callbacks;
 
       XsControl* m_control;
       XsPortInfoArray m_detected_devices;
@@ -135,20 +135,20 @@ namespace hiros {
       std::string m_node_namespace;
 
       const XsDataPacket* m_packet;
-      ros::Time m_sample_time;
+      std::map<XsDeviceId, ros::Time> m_sample_time;
 
       std::map<XsDeviceId, XsTimeStamp> m_prev_packet_time_of_arrival;
       std::map<XsDeviceId, ros::Time> m_prev_packet_sample_time;
 
       ros::ServiceServer m_reset_orientation_srv;
-      std::vector<ros::Publisher> m_imu_pub;
-      std::vector<ros::Publisher> m_acceleration_pub;
-      std::vector<ros::Publisher> m_angular_velocity_pub;
-      std::vector<ros::Publisher> m_mag_pub;
-      std::vector<ros::Publisher> m_euler_pub;
-      std::vector<ros::Publisher> m_quaternion_pub;
-      std::vector<ros::Publisher> m_free_acceleration_pub;
-      std::vector<ros::Publisher> m_pressure_pub;
+      std::map<XsDeviceId, ros::Publisher> m_imu_pubs;
+      std::map<XsDeviceId, ros::Publisher> m_acceleration_pubs;
+      std::map<XsDeviceId, ros::Publisher> m_angular_velocity_pubs;
+      std::map<XsDeviceId, ros::Publisher> m_mag_pubs;
+      std::map<XsDeviceId, ros::Publisher> m_euler_pubs;
+      std::map<XsDeviceId, ros::Publisher> m_quaternion_pubs;
+      std::map<XsDeviceId, ros::Publisher> m_free_acceleration_pubs;
+      std::map<XsDeviceId, ros::Publisher> m_pressure_pubs;
       tf2_ros::TransformBroadcaster m_tf_broadcaster;
 
       static bool s_request_shutdown;
