@@ -92,6 +92,7 @@ namespace hiros {
       std::string composeTopicPrefix(const XsDeviceId& t_id) const;
       void computeSampleTime();
 
+      void publishData();
       sensor_msgs::Imu getImuMsg() const;
       geometry_msgs::Vector3Stamped getAccelerationMsg() const;
       geometry_msgs::Vector3Stamped getAngularVelocityMsg() const;

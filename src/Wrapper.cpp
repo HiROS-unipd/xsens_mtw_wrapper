@@ -71,47 +71,8 @@ void hiros::xsens_mtw::Wrapper::run()
       if (m_mtw_callbacks.at(device.first)->dataAvailable()) {
         m_packet = m_mtw_callbacks.at(device.first)->getOldestPacket();
         computeSampleTime();
-
-        if (m_wrapper_params.publish_imu) {
-          m_imu_pubs.at(device.first).publish(getImuMsg());
-        }
-
-        if (m_wrapper_params.publish_acceleration) {
-          m_acceleration_pubs.at(device.first).publish(getAccelerationMsg());
-        }
-
-        if (m_wrapper_params.publish_angular_velocity) {
-          m_angular_velocity_pubs.at(device.first).publish(getAngularVelocityMsg());
-        }
-
-        if (m_wrapper_params.publish_mag) {
-          m_mag_pubs.at(device.first).publish(getMagMsg());
-        }
-
-        if (m_wrapper_params.publish_euler) {
-          m_euler_pubs.at(device.first).publish(getEulerMsg());
-        }
-
-        if (m_wrapper_params.publish_quaternion) {
-          m_quaternion_pubs.at(device.first).publish(getQuaternionMsg());
-        }
-
-        if (m_wrapper_params.publish_free_acceleration) {
-          m_free_acceleration_pubs.at(device.first).publish(getFreeAccelerationMsg());
-        }
-
-        if (m_wrapper_params.publish_pressure) {
-          m_pressure_pubs.at(device.first).publish(getPressureMsg());
-        }
-
-        if (m_wrapper_params.publish_tf) {
-          if (m_packet->containsOrientation()) {
-            m_tf_broadcaster.sendTransform(getTf());
-          }
-        }
-
+        publishData();
         m_mtw_callbacks.at(device.first)->deleteOldestPacket();
-        ros::spinOnce();
       }
     }
   }
@@ -655,6 +616,49 @@ void hiros::xsens_mtw::Wrapper::computeSampleTime()
 
   m_prev_packet_time_of_arrival.at(m_packet->deviceId()) = m_packet->timeOfArrival();
   m_prev_packet_sample_time.at(m_packet->deviceId()) = m_sample_time.at(m_packet->deviceId());
+}
+
+void hiros::xsens_mtw::Wrapper::publishData()
+{
+  if (m_wrapper_params.publish_imu) {
+    m_imu_pubs.at(m_packet->deviceId()).publish(getImuMsg());
+  }
+
+  if (m_wrapper_params.publish_acceleration) {
+    m_acceleration_pubs.at(m_packet->deviceId()).publish(getAccelerationMsg());
+  }
+
+  if (m_wrapper_params.publish_angular_velocity) {
+    m_angular_velocity_pubs.at(m_packet->deviceId()).publish(getAngularVelocityMsg());
+  }
+
+  if (m_wrapper_params.publish_mag) {
+    m_mag_pubs.at(m_packet->deviceId()).publish(getMagMsg());
+  }
+
+  if (m_wrapper_params.publish_euler) {
+    m_euler_pubs.at(m_packet->deviceId()).publish(getEulerMsg());
+  }
+
+  if (m_wrapper_params.publish_quaternion) {
+    m_quaternion_pubs.at(m_packet->deviceId()).publish(getQuaternionMsg());
+  }
+
+  if (m_wrapper_params.publish_free_acceleration) {
+    m_free_acceleration_pubs.at(m_packet->deviceId()).publish(getFreeAccelerationMsg());
+  }
+
+  if (m_wrapper_params.publish_pressure) {
+    m_pressure_pubs.at(m_packet->deviceId()).publish(getPressureMsg());
+  }
+
+  if (m_wrapper_params.publish_tf) {
+    if (m_packet->containsOrientation()) {
+      m_tf_broadcaster.sendTransform(getTf());
+    }
+  }
+
+  ros::spinOnce();
 }
 
 sensor_msgs::Imu hiros::xsens_mtw::Wrapper::getImuMsg() const
