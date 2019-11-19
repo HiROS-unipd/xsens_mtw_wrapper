@@ -20,9 +20,13 @@ namespace hiros {
       MtwCallback(int t_mtw_index, XsDevice* t_device);
 
       bool dataAvailable() const;
+      bool newDataAvailable();
 
       XsDataPacket const* getOldestPacket() const;
+      XsDataPacket const* getLatestPacket() const;
+
       void deleteOldestPacket();
+      void deleteOldestPackets(const unsigned long& t_n_packets);
 
       inline int getMtwIndex() const { return m_mtw_index; }
       XsDevice const& device() const;
@@ -33,6 +37,7 @@ namespace hiros {
     private:
       mutable XsMutex m_mutex;
       std::list<XsDataPacket> m_packet_buffer;
+      size_t m_buffer_size;
       int m_mtw_index;
       XsDevice* m_device;
     };
