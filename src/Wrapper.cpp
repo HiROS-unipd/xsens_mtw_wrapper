@@ -53,7 +53,7 @@ void hiros::xsens_mtw::Wrapper::start()
     attachCallbackHandlers();
   } while (!startMeasurement());
 
-  initializeMaps();
+  initializeTimestampsBuffer();
   setupRos();
 
   if (m_mtw_params.reset_initial_orientation) {
@@ -68,7 +68,10 @@ void hiros::xsens_mtw::Wrapper::run()
   while (ros::ok() && !s_request_shutdown) {
     for (auto& device : m_connected_devices) {
       if (m_mtw_callbacks.at(device.first)->newDataAvailable()) {
-        updatePacketBuffer(device.first);
+        m_latest_packet = m_mtw_callbacks.at(device.first)->getLatestPacket();
+        updateTimestampsBuffer();
+        publishData();
+        m_mtw_callbacks.at(device.first)->deleteOldestPacket();
       }
     }
   }
@@ -266,9 +269,10 @@ void hiros::xsens_mtw::Wrapper::stopWrapper()
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Shutting down ROS service server");
   m_reset_orientation_srv.shutdown();
 
-  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Clearing label maps");
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Clearing label and timestamp maps");
   m_ids_to_labels.clear();
   m_labels_to_ids.clear();
+  m_timestamps_buffer.clear();
 }
 
 bool hiros::xsens_mtw::Wrapper::waitMtwConnection()
@@ -495,13 +499,10 @@ bool hiros::xsens_mtw::Wrapper::disableRadio()
   return true;
 }
 
-void hiros::xsens_mtw::Wrapper::initializeMaps()
+void hiros::xsens_mtw::Wrapper::initializeTimestampsBuffer()
 {
   for (auto& device : m_connected_devices) {
-    m_second_prev_packet_toa.emplace(device.first, 0);
-    m_prev_packet_toa.emplace(device.first, 0);
-    m_sample_time.emplace(device.first, ros::Time(0));
-    m_packet_buffer.emplace(device.first, std::vector<const XsDataPacket*>());
+    m_timestamps_buffer.emplace(device.first, std::deque<ros::Time>());
   }
 }
 
@@ -593,97 +594,110 @@ std::string hiros::xsens_mtw::Wrapper::composeTopicPrefix(const XsDeviceId& t_id
   return "/" + m_node_namespace + "/" + getDeviceLabel(t_id);
 }
 
-void hiros::xsens_mtw::Wrapper::updatePacketBuffer(const XsDeviceId& t_id)
+void hiros::xsens_mtw::Wrapper::updateTimestampsBuffer()
 {
-  m_latest_packet = m_mtw_callbacks.at(t_id)->getLatestPacket();
+  addTimestampsToBuffer();
 
-  // Same timeOfArrival
-  if ((m_latest_packet->timeOfArrival() - m_prev_packet_toa.at(t_id)).secTime() < (m_toa_threshold / m_update_rate)) {
-    m_packet_buffer.at(t_id).push_back(m_latest_packet);
-  }
-  // New timeOfArrival
-  else {
-    // Compute sample times and publish if the necessary data is available
-    if (m_second_prev_packet_toa.at(t_id).secTime() > 0) {
-      for (size_t packet_index = 0; packet_index < m_packet_buffer.at(t_id).size(); ++packet_index) {
-        computeSampleTime(packet_index);
-        publishData(m_packet_buffer.at(t_id).at(packet_index));
-      }
-
-      m_mtw_callbacks.at(t_id)->deleteOldestPackets(m_packet_buffer.at(t_id).size());
-      m_packet_buffer.at(t_id).clear();
-      m_packet_buffer.at(t_id).push_back(m_latest_packet);
-    }
-
-    m_second_prev_packet_toa.at(t_id) = m_prev_packet_toa.at(t_id);
-    m_prev_packet_toa.at(t_id) = m_latest_packet->timeOfArrival();
+  // If buffer is growing too much (thus creating a delay), reduce size by 1 and stretch delta t accordingly
+  if (m_timestamps_buffer.at(m_latest_packet->deviceId()).size() > m_max_timestamps_buffer_size) {
+    restructureTimestampsBuffer();
   }
 }
 
-void hiros::xsens_mtw::Wrapper::computeSampleTime(const size_t& t_packet_index)
+void hiros::xsens_mtw::Wrapper::addTimestampsToBuffer()
 {
   XsDeviceId id = m_latest_packet->deviceId();
 
-  m_sample_time.at(id) =
-    ros::Time(m_second_prev_packet_toa.at(id).secTime()
-              + (t_packet_index + 1) / static_cast<double>(m_packet_buffer.at(id).size())
-                  * (m_prev_packet_toa.at(id).secTime() - m_second_prev_packet_toa.at(id).secTime()));
-}
-
-void hiros::xsens_mtw::Wrapper::publishData(const XsDataPacket*& t_packet)
-{
-  if (m_wrapper_params.publish_imu) {
-    m_imu_pubs.at(t_packet->deviceId()).publish(getImuMsg(t_packet));
+  if (m_timestamps_buffer.at(id).empty()) {
+    m_timestamps_buffer.at(id).push_back(ros::Time(m_latest_packet->timeOfArrival().secTime()));
   }
+  else {
+    double delta_t = m_latest_packet->timeOfArrival().secTime() - m_timestamps_buffer.at(id).back().toSec();
+    unsigned int n_timestamps_to_add = static_cast<unsigned int>(std::round(delta_t * m_update_rate));
 
-  if (m_wrapper_params.publish_acceleration) {
-    m_acceleration_pubs.at(t_packet->deviceId()).publish(getAccelerationMsg(t_packet));
-  }
-
-  if (m_wrapper_params.publish_angular_velocity) {
-    m_angular_velocity_pubs.at(t_packet->deviceId()).publish(getAngularVelocityMsg(t_packet));
-  }
-
-  if (m_wrapper_params.publish_mag) {
-    m_mag_pubs.at(t_packet->deviceId()).publish(getMagMsg(t_packet));
-  }
-
-  if (m_wrapper_params.publish_euler) {
-    m_euler_pubs.at(t_packet->deviceId()).publish(getEulerMsg(t_packet));
-  }
-
-  if (m_wrapper_params.publish_quaternion) {
-    m_quaternion_pubs.at(t_packet->deviceId()).publish(getQuaternionMsg(t_packet));
-  }
-
-  if (m_wrapper_params.publish_free_acceleration) {
-    m_free_acceleration_pubs.at(t_packet->deviceId()).publish(getFreeAccelerationMsg(t_packet));
-  }
-
-  if (m_wrapper_params.publish_pressure) {
-    m_pressure_pubs.at(t_packet->deviceId()).publish(getPressureMsg(t_packet));
-  }
-
-  if (m_wrapper_params.publish_tf) {
-    if (t_packet->containsOrientation()) {
-      m_tf_broadcaster.sendTransform(getTf(t_packet));
+    for (unsigned int i = 0; i < n_timestamps_to_add; ++i) {
+      m_timestamps_buffer.at(id).push_back(m_timestamps_buffer.at(id).back()
+                                           + ros::Duration(delta_t / n_timestamps_to_add));
     }
   }
+};
 
-  ros::spinOnce();
+void hiros::xsens_mtw::Wrapper::restructureTimestampsBuffer()
+{
+  XsDeviceId id = m_latest_packet->deviceId();
+
+  double new_delta_t = (m_timestamps_buffer.at(id).back() - m_timestamps_buffer.at(id).front()).toSec()
+                       / (m_timestamps_buffer.at(id).size() - 2);
+  m_timestamps_buffer.at(id).pop_back();
+
+  for (unsigned int timestamp_idx = 1; timestamp_idx < m_timestamps_buffer.at(id).size(); ++timestamp_idx) {
+    m_timestamps_buffer.at(id).at(timestamp_idx) =
+      m_timestamps_buffer.at(id).front() + ros::Duration(timestamp_idx * new_delta_t);
+  }
+};
+
+void hiros::xsens_mtw::Wrapper::publishData()
+{
+  XsDeviceId id = m_latest_packet->deviceId();
+
+  if (m_timestamps_buffer.at(id).size() > 1) {
+    // Pop front (timestamp assigned to the last published packet) so that now front contains the timestamp to assign
+    // to the packet to be published
+    m_timestamps_buffer.at(id).pop_front();
+
+    if (m_wrapper_params.publish_imu) {
+      m_imu_pubs.at(id).publish(getImuMsg());
+    }
+
+    if (m_wrapper_params.publish_acceleration) {
+      m_acceleration_pubs.at(id).publish(getAccelerationMsg());
+    }
+
+    if (m_wrapper_params.publish_angular_velocity) {
+      m_angular_velocity_pubs.at(id).publish(getAngularVelocityMsg());
+    }
+
+    if (m_wrapper_params.publish_mag) {
+      m_mag_pubs.at(id).publish(getMagMsg());
+    }
+
+    if (m_wrapper_params.publish_euler) {
+      m_euler_pubs.at(id).publish(getEulerMsg());
+    }
+
+    if (m_wrapper_params.publish_quaternion) {
+      m_quaternion_pubs.at(id).publish(getQuaternionMsg());
+    }
+
+    if (m_wrapper_params.publish_free_acceleration) {
+      m_free_acceleration_pubs.at(id).publish(getFreeAccelerationMsg());
+    }
+
+    if (m_wrapper_params.publish_pressure) {
+      m_pressure_pubs.at(id).publish(getPressureMsg());
+    }
+
+    if (m_wrapper_params.publish_tf) {
+      if (m_latest_packet->containsOrientation()) {
+        m_tf_broadcaster.sendTransform(getTf());
+      }
+    }
+
+    ros::spinOnce();
+  }
 }
 
-sensor_msgs::Imu hiros::xsens_mtw::Wrapper::getImuMsg(const XsDataPacket*& t_packet) const
+sensor_msgs::Imu hiros::xsens_mtw::Wrapper::getImuMsg() const
 {
   sensor_msgs::Imu out_msg;
-  out_msg.header.stamp = m_sample_time.at(t_packet->deviceId());
-  out_msg.header.frame_id = getDeviceLabel(t_packet->deviceId());
+  out_msg.header.stamp = m_timestamps_buffer.at(m_latest_packet->deviceId()).front();
+  out_msg.header.frame_id = getDeviceLabel(m_latest_packet->deviceId());
 
-  if (t_packet->containsOrientation()) {
-    out_msg.orientation.x = t_packet->orientationQuaternion().x();
-    out_msg.orientation.y = t_packet->orientationQuaternion().y();
-    out_msg.orientation.z = t_packet->orientationQuaternion().z();
-    out_msg.orientation.w = t_packet->orientationQuaternion().w();
+  if (m_latest_packet->containsOrientation()) {
+    out_msg.orientation.x = m_latest_packet->orientationQuaternion().x();
+    out_msg.orientation.y = m_latest_packet->orientationQuaternion().y();
+    out_msg.orientation.z = m_latest_packet->orientationQuaternion().z();
+    out_msg.orientation.w = m_latest_packet->orientationQuaternion().w();
     out_msg.orientation_covariance.front() = 0.0;
   }
   else {
@@ -694,10 +708,10 @@ sensor_msgs::Imu hiros::xsens_mtw::Wrapper::getImuMsg(const XsDataPacket*& t_pac
     out_msg.orientation_covariance.front() = -1.0;
   }
 
-  if (t_packet->containsCalibratedGyroscopeData()) {
-    out_msg.angular_velocity.x = t_packet->calibratedGyroscopeData().at(0);
-    out_msg.angular_velocity.y = t_packet->calibratedGyroscopeData().at(1);
-    out_msg.angular_velocity.z = t_packet->calibratedGyroscopeData().at(2);
+  if (m_latest_packet->containsCalibratedGyroscopeData()) {
+    out_msg.angular_velocity.x = m_latest_packet->calibratedGyroscopeData().at(0);
+    out_msg.angular_velocity.y = m_latest_packet->calibratedGyroscopeData().at(1);
+    out_msg.angular_velocity.z = m_latest_packet->calibratedGyroscopeData().at(2);
     out_msg.angular_velocity_covariance.front() = 0.0;
   }
   else {
@@ -707,10 +721,10 @@ sensor_msgs::Imu hiros::xsens_mtw::Wrapper::getImuMsg(const XsDataPacket*& t_pac
     out_msg.angular_velocity_covariance.front() = -1.0;
   }
 
-  if (t_packet->containsCalibratedAcceleration()) {
-    out_msg.linear_acceleration.x = t_packet->calibratedAcceleration().at(0);
-    out_msg.linear_acceleration.y = t_packet->calibratedAcceleration().at(1);
-    out_msg.linear_acceleration.z = t_packet->calibratedAcceleration().at(2);
+  if (m_latest_packet->containsCalibratedAcceleration()) {
+    out_msg.linear_acceleration.x = m_latest_packet->calibratedAcceleration().at(0);
+    out_msg.linear_acceleration.y = m_latest_packet->calibratedAcceleration().at(1);
+    out_msg.linear_acceleration.z = m_latest_packet->calibratedAcceleration().at(2);
     out_msg.linear_acceleration_covariance.front() = 0.0;
   }
   else {
@@ -723,16 +737,16 @@ sensor_msgs::Imu hiros::xsens_mtw::Wrapper::getImuMsg(const XsDataPacket*& t_pac
   return out_msg;
 }
 
-geometry_msgs::Vector3Stamped hiros::xsens_mtw::Wrapper::getAccelerationMsg(const XsDataPacket*& t_packet) const
+geometry_msgs::Vector3Stamped hiros::xsens_mtw::Wrapper::getAccelerationMsg() const
 {
   geometry_msgs::Vector3Stamped out_msg;
-  out_msg.header.stamp = m_sample_time.at(t_packet->deviceId());
-  out_msg.header.frame_id = getDeviceLabel(t_packet->deviceId());
+  out_msg.header.stamp = m_timestamps_buffer.at(m_latest_packet->deviceId()).front();
+  out_msg.header.frame_id = getDeviceLabel(m_latest_packet->deviceId());
 
-  if (t_packet->containsCalibratedAcceleration()) {
-    out_msg.vector.x = t_packet->calibratedAcceleration().at(0);
-    out_msg.vector.y = t_packet->calibratedAcceleration().at(1);
-    out_msg.vector.z = t_packet->calibratedAcceleration().at(2);
+  if (m_latest_packet->containsCalibratedAcceleration()) {
+    out_msg.vector.x = m_latest_packet->calibratedAcceleration().at(0);
+    out_msg.vector.y = m_latest_packet->calibratedAcceleration().at(1);
+    out_msg.vector.z = m_latest_packet->calibratedAcceleration().at(2);
   }
   else {
     out_msg.vector.x = std::numeric_limits<double>::quiet_NaN();
@@ -743,16 +757,16 @@ geometry_msgs::Vector3Stamped hiros::xsens_mtw::Wrapper::getAccelerationMsg(cons
   return out_msg;
 }
 
-geometry_msgs::Vector3Stamped hiros::xsens_mtw::Wrapper::getAngularVelocityMsg(const XsDataPacket*& t_packet) const
+geometry_msgs::Vector3Stamped hiros::xsens_mtw::Wrapper::getAngularVelocityMsg() const
 {
   geometry_msgs::Vector3Stamped out_msg;
-  out_msg.header.stamp = m_sample_time.at(t_packet->deviceId());
-  out_msg.header.frame_id = getDeviceLabel(t_packet->deviceId());
+  out_msg.header.stamp = m_timestamps_buffer.at(m_latest_packet->deviceId()).front();
+  out_msg.header.frame_id = getDeviceLabel(m_latest_packet->deviceId());
 
-  if (t_packet->containsCalibratedGyroscopeData()) {
-    out_msg.vector.x = t_packet->calibratedGyroscopeData().at(0);
-    out_msg.vector.y = t_packet->calibratedGyroscopeData().at(1);
-    out_msg.vector.z = t_packet->calibratedGyroscopeData().at(2);
+  if (m_latest_packet->containsCalibratedGyroscopeData()) {
+    out_msg.vector.x = m_latest_packet->calibratedGyroscopeData().at(0);
+    out_msg.vector.y = m_latest_packet->calibratedGyroscopeData().at(1);
+    out_msg.vector.z = m_latest_packet->calibratedGyroscopeData().at(2);
   }
   else {
     out_msg.vector.x = std::numeric_limits<double>::quiet_NaN();
@@ -763,16 +777,16 @@ geometry_msgs::Vector3Stamped hiros::xsens_mtw::Wrapper::getAngularVelocityMsg(c
   return out_msg;
 }
 
-sensor_msgs::MagneticField hiros::xsens_mtw::Wrapper::getMagMsg(const XsDataPacket*& t_packet) const
+sensor_msgs::MagneticField hiros::xsens_mtw::Wrapper::getMagMsg() const
 {
   sensor_msgs::MagneticField out_msg;
-  out_msg.header.stamp = m_sample_time.at(t_packet->deviceId());
-  out_msg.header.frame_id = getDeviceLabel(t_packet->deviceId());
+  out_msg.header.stamp = m_timestamps_buffer.at(m_latest_packet->deviceId()).front();
+  out_msg.header.frame_id = getDeviceLabel(m_latest_packet->deviceId());
 
-  if (t_packet->containsCalibratedMagneticField()) {
-    out_msg.magnetic_field.x = t_packet->calibratedMagneticField().at(0) * 1e-4; // G to T
-    out_msg.magnetic_field.y = t_packet->calibratedMagneticField().at(1) * 1e-4; // G to T
-    out_msg.magnetic_field.z = t_packet->calibratedMagneticField().at(2) * 1e-4; // G to T
+  if (m_latest_packet->containsCalibratedMagneticField()) {
+    out_msg.magnetic_field.x = m_latest_packet->calibratedMagneticField().at(0) * 1e-4; // G to T
+    out_msg.magnetic_field.y = m_latest_packet->calibratedMagneticField().at(1) * 1e-4; // G to T
+    out_msg.magnetic_field.z = m_latest_packet->calibratedMagneticField().at(2) * 1e-4; // G to T
     out_msg.magnetic_field_covariance.front() = 0.0;
   }
   else {
@@ -785,19 +799,19 @@ sensor_msgs::MagneticField hiros::xsens_mtw::Wrapper::getMagMsg(const XsDataPack
   return out_msg;
 }
 
-hiros_xsens_mtw_wrapper::Euler hiros::xsens_mtw::Wrapper::getEulerMsg(const XsDataPacket*& t_packet) const
+hiros_xsens_mtw_wrapper::Euler hiros::xsens_mtw::Wrapper::getEulerMsg() const
 {
   hiros_xsens_mtw_wrapper::Euler out_msg;
-  out_msg.header.stamp = m_sample_time.at(t_packet->deviceId());
-  out_msg.header.frame_id = getDeviceLabel(t_packet->deviceId());
+  out_msg.header.stamp = m_timestamps_buffer.at(m_latest_packet->deviceId()).front();
+  out_msg.header.frame_id = getDeviceLabel(m_latest_packet->deviceId());
 
-  if (t_packet->containsOrientation()) {
+  if (m_latest_packet->containsOrientation()) {
     // roll = atan2(2 * (qw * qx + qy * qz), (1 - 2 * (pow(qx, 2) + pow(qy, 2))))
-    out_msg.roll = t_packet->orientationEuler().roll();
+    out_msg.roll = m_latest_packet->orientationEuler().roll();
     // pitch = asin(2 * (qw * qy - qz * qx))
-    out_msg.pitch = t_packet->orientationEuler().pitch();
+    out_msg.pitch = m_latest_packet->orientationEuler().pitch();
     // yaw = atan2(2 * (qw * qz + qx * qy), (1 - 2 * (pow(qy, 2) + pow(qz, 2))))
-    out_msg.yaw = t_packet->orientationEuler().yaw();
+    out_msg.yaw = m_latest_packet->orientationEuler().yaw();
   }
   else {
     out_msg.roll = std::numeric_limits<double>::quiet_NaN();
@@ -808,17 +822,17 @@ hiros_xsens_mtw_wrapper::Euler hiros::xsens_mtw::Wrapper::getEulerMsg(const XsDa
   return out_msg;
 }
 
-geometry_msgs::QuaternionStamped hiros::xsens_mtw::Wrapper::getQuaternionMsg(const XsDataPacket*& t_packet) const
+geometry_msgs::QuaternionStamped hiros::xsens_mtw::Wrapper::getQuaternionMsg() const
 {
   geometry_msgs::QuaternionStamped out_msg;
-  out_msg.header.stamp = m_sample_time.at(t_packet->deviceId());
-  out_msg.header.frame_id = getDeviceLabel(t_packet->deviceId());
+  out_msg.header.stamp = m_timestamps_buffer.at(m_latest_packet->deviceId()).front();
+  out_msg.header.frame_id = getDeviceLabel(m_latest_packet->deviceId());
 
-  if (t_packet->containsOrientation()) {
-    out_msg.quaternion.x = t_packet->orientationQuaternion().x();
-    out_msg.quaternion.y = t_packet->orientationQuaternion().y();
-    out_msg.quaternion.z = t_packet->orientationQuaternion().z();
-    out_msg.quaternion.w = t_packet->orientationQuaternion().w();
+  if (m_latest_packet->containsOrientation()) {
+    out_msg.quaternion.x = m_latest_packet->orientationQuaternion().x();
+    out_msg.quaternion.y = m_latest_packet->orientationQuaternion().y();
+    out_msg.quaternion.z = m_latest_packet->orientationQuaternion().z();
+    out_msg.quaternion.w = m_latest_packet->orientationQuaternion().w();
   }
   else {
     out_msg.quaternion.x = std::numeric_limits<double>::quiet_NaN();
@@ -830,16 +844,16 @@ geometry_msgs::QuaternionStamped hiros::xsens_mtw::Wrapper::getQuaternionMsg(con
   return out_msg;
 }
 
-geometry_msgs::Vector3Stamped hiros::xsens_mtw::Wrapper::getFreeAccelerationMsg(const XsDataPacket*& t_packet) const
+geometry_msgs::Vector3Stamped hiros::xsens_mtw::Wrapper::getFreeAccelerationMsg() const
 {
   geometry_msgs::Vector3Stamped out_msg;
-  out_msg.header.stamp = m_sample_time.at(t_packet->deviceId());
-  out_msg.header.frame_id = getDeviceLabel(t_packet->deviceId());
+  out_msg.header.stamp = m_timestamps_buffer.at(m_latest_packet->deviceId()).front();
+  out_msg.header.frame_id = getDeviceLabel(m_latest_packet->deviceId());
 
-  if (t_packet->containsFreeAcceleration()) {
-    out_msg.vector.x = t_packet->freeAcceleration().at(0);
-    out_msg.vector.y = t_packet->freeAcceleration().at(1);
-    out_msg.vector.z = t_packet->freeAcceleration().at(2);
+  if (m_latest_packet->containsFreeAcceleration()) {
+    out_msg.vector.x = m_latest_packet->freeAcceleration().at(0);
+    out_msg.vector.y = m_latest_packet->freeAcceleration().at(1);
+    out_msg.vector.z = m_latest_packet->freeAcceleration().at(2);
   }
   else {
     out_msg.vector.x = std::numeric_limits<double>::quiet_NaN();
@@ -850,14 +864,14 @@ geometry_msgs::Vector3Stamped hiros::xsens_mtw::Wrapper::getFreeAccelerationMsg(
   return out_msg;
 }
 
-sensor_msgs::FluidPressure hiros::xsens_mtw::Wrapper::getPressureMsg(const XsDataPacket*& t_packet) const
+sensor_msgs::FluidPressure hiros::xsens_mtw::Wrapper::getPressureMsg() const
 {
   sensor_msgs::FluidPressure out_msg;
-  out_msg.header.stamp = m_sample_time.at(t_packet->deviceId());
-  out_msg.header.frame_id = getDeviceLabel(t_packet->deviceId());
+  out_msg.header.stamp = m_timestamps_buffer.at(m_latest_packet->deviceId()).front();
+  out_msg.header.frame_id = getDeviceLabel(m_latest_packet->deviceId());
 
-  if (t_packet->containsPressure()) {
-    out_msg.fluid_pressure = t_packet->pressure().m_pressure;
+  if (m_latest_packet->containsPressure()) {
+    out_msg.fluid_pressure = m_latest_packet->pressure().m_pressure;
     out_msg.variance = 0.0;
   }
   else {
@@ -868,20 +882,20 @@ sensor_msgs::FluidPressure hiros::xsens_mtw::Wrapper::getPressureMsg(const XsDat
   return out_msg;
 }
 
-geometry_msgs::TransformStamped hiros::xsens_mtw::Wrapper::getTf(const XsDataPacket*& t_packet) const
+geometry_msgs::TransformStamped hiros::xsens_mtw::Wrapper::getTf() const
 {
   geometry_msgs::TransformStamped tf;
-  tf.header.stamp = m_sample_time.at(t_packet->deviceId());
+  tf.header.stamp = m_timestamps_buffer.at(m_latest_packet->deviceId()).front();
   tf.header.frame_id = "world";
-  tf.child_frame_id = getDeviceLabel(t_packet->deviceId());
+  tf.child_frame_id = getDeviceLabel(m_latest_packet->deviceId());
 
   tf.transform.translation.x = 0.0;
   tf.transform.translation.y = 0.0;
   tf.transform.translation.z = 0.0;
-  tf.transform.rotation.x = t_packet->orientationQuaternion().x();
-  tf.transform.rotation.y = t_packet->orientationQuaternion().y();
-  tf.transform.rotation.z = t_packet->orientationQuaternion().z();
-  tf.transform.rotation.w = t_packet->orientationQuaternion().w();
+  tf.transform.rotation.x = m_latest_packet->orientationQuaternion().x();
+  tf.transform.rotation.y = m_latest_packet->orientationQuaternion().y();
+  tf.transform.rotation.z = m_latest_packet->orientationQuaternion().z();
+  tf.transform.rotation.w = m_latest_packet->orientationQuaternion().w();
 
   return tf;
 }

@@ -3,6 +3,7 @@
 
 // Standard dependencies
 #include <csignal>
+#include <deque>
 
 // ROS dependencies
 #include "geometry_msgs/QuaternionStamped.h"
@@ -83,33 +84,32 @@ namespace hiros {
       bool setRadioChannel();
       bool disableRadio();
 
-      void initializeMaps();
+      void initializeTimestampsBuffer();
       void setupRos();
       bool resetInitialOrientation() const;
       std::string getDeviceLabel(const XsDeviceId& t_id) const;
       XsDeviceId getDeviceId(const std::string t_label) const;
       std::string composeTopicPrefix(const XsDeviceId& t_id) const;
 
-      void updatePacketBuffer(const XsDeviceId& t_id);
-      void computeSampleTime(const size_t& t_packet_index);
+      void updateTimestampsBuffer();
+      void addTimestampsToBuffer();
+      void restructureTimestampsBuffer();
 
-      void publishData(const XsDataPacket*& t_packet);
-      sensor_msgs::Imu getImuMsg(const XsDataPacket*& t_packet) const;
-      geometry_msgs::Vector3Stamped getAccelerationMsg(const XsDataPacket*& t_packet) const;
-      geometry_msgs::Vector3Stamped getAngularVelocityMsg(const XsDataPacket*& t_packet) const;
-      sensor_msgs::MagneticField getMagMsg(const XsDataPacket*& t_packet) const;
-      hiros_xsens_mtw_wrapper::Euler getEulerMsg(const XsDataPacket*& t_packet) const;
-      geometry_msgs::QuaternionStamped getQuaternionMsg(const XsDataPacket*& t_packet) const;
-      geometry_msgs::Vector3Stamped getFreeAccelerationMsg(const XsDataPacket*& t_packet) const;
-      sensor_msgs::FluidPressure getPressureMsg(const XsDataPacket*& t_packet) const;
-      geometry_msgs::TransformStamped getTf(const XsDataPacket*& t_packet) const;
+      void publishData();
+      sensor_msgs::Imu getImuMsg() const;
+      geometry_msgs::Vector3Stamped getAccelerationMsg() const;
+      geometry_msgs::Vector3Stamped getAngularVelocityMsg() const;
+      sensor_msgs::MagneticField getMagMsg() const;
+      hiros_xsens_mtw_wrapper::Euler getEulerMsg() const;
+      geometry_msgs::QuaternionStamped getQuaternionMsg() const;
+      geometry_msgs::Vector3Stamped getFreeAccelerationMsg() const;
+      sensor_msgs::FluidPressure getPressureMsg() const;
+      geometry_msgs::TransformStamped getTf() const;
 
       bool resetOrientation(hiros_xsens_mtw_wrapper::ResetOrientation::Request& t_req,
                             hiros_xsens_mtw_wrapper::ResetOrientation::Response& t_res);
 
       static inline void sighandler(int t_sig) { s_request_shutdown = (t_sig == SIGINT); };
-
-      const double m_toa_threshold = 0.2;
 
       XsensMtwParameters m_mtw_params;
       WrapperParameters m_wrapper_params;
@@ -132,17 +132,15 @@ namespace hiros {
       std::map<XsDeviceId, std::string> m_ids_to_labels;
       std::map<std::string, XsDeviceId> m_labels_to_ids;
 
+      const double m_max_timestamps_buffer_size = 9;
+
+      const XsDataPacket* m_latest_packet;
+      std::map<XsDeviceId, std::deque<ros::Time>> m_timestamps_buffer;
+
       bool m_xsens_mtw_configured;
 
       ros::NodeHandle m_nh;
       std::string m_node_namespace;
-
-      const XsDataPacket* m_latest_packet;
-
-      std::map<XsDeviceId, XsTimeStamp> m_second_prev_packet_toa;
-      std::map<XsDeviceId, XsTimeStamp> m_prev_packet_toa;
-      std::map<XsDeviceId, ros::Time> m_sample_time;
-      std::map<XsDeviceId, std::vector<const XsDataPacket*>> m_packet_buffer;
 
       ros::ServiceServer m_reset_orientation_srv;
       std::map<XsDeviceId, ros::Publisher> m_imu_pubs;
