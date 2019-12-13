@@ -3,6 +3,7 @@
 <launch>
   <arg name="xsens_mtw_node_required"   default="false"     />
   <arg name="node_name"                 default="xsens_mtw" />
+  <arg name="tf_prefix"                 default=""          />
 
   <arg name="desired_update_rate"       default="100"       />
   <arg name="desired_radio_channel"     default="19"        />
@@ -24,6 +25,7 @@
     <rosparam if="$(arg enable_custom_labeling)" command="load" file="$(find hiros_xsens_mtw_wrapper)/config/sensor_labels.yaml" />
 
     <param name="node_name"                 type="str"  value="$(arg node_name)"                 />
+    <param name="tf_prefix"                 type="str"  value="$(arg tf_prefix)"                 />
 
     <param name="desired_update_rate"       type="int"  value="$(arg desired_update_rate)"       />
     <param name="desired_radio_channel"     type="int"  value="$(arg desired_radio_channel)"     />

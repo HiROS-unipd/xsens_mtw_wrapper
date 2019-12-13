@@ -36,6 +36,7 @@ namespace hiros {
 
     struct WrapperParameters
     {
+      std::string tf_prefix;
       bool enable_custom_labeling;
 
       bool publish_imu;

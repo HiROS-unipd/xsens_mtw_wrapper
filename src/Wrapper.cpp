@@ -119,6 +119,7 @@ void hiros::xsens_mtw::Wrapper::configureWrapper()
 
   m_nh.getParam("reset_initial_orientation", m_mtw_params.reset_initial_orientation);
 
+  m_nh.getParam("tf_prefix", m_wrapper_params.tf_prefix);
   m_nh.getParam("enable_custom_labeling", m_wrapper_params.enable_custom_labeling);
 
   m_nh.getParam("publish_imu", m_wrapper_params.publish_imu);
@@ -691,7 +692,7 @@ sensor_msgs::Imu hiros::xsens_mtw::Wrapper::getImuMsg() const
 {
   sensor_msgs::Imu out_msg;
   out_msg.header.stamp = m_timestamps_buffer.at(m_latest_packet->deviceId()).front();
-  out_msg.header.frame_id = getDeviceLabel(m_latest_packet->deviceId());
+  out_msg.header.frame_id = m_wrapper_params.tf_prefix + getDeviceLabel(m_latest_packet->deviceId());
 
   if (m_latest_packet->containsOrientation()) {
     out_msg.orientation.x = m_latest_packet->orientationQuaternion().x();
@@ -741,7 +742,7 @@ geometry_msgs::Vector3Stamped hiros::xsens_mtw::Wrapper::getAccelerationMsg() co
 {
   geometry_msgs::Vector3Stamped out_msg;
   out_msg.header.stamp = m_timestamps_buffer.at(m_latest_packet->deviceId()).front();
-  out_msg.header.frame_id = getDeviceLabel(m_latest_packet->deviceId());
+  out_msg.header.frame_id = m_wrapper_params.tf_prefix + getDeviceLabel(m_latest_packet->deviceId());
 
   if (m_latest_packet->containsCalibratedAcceleration()) {
     out_msg.vector.x = m_latest_packet->calibratedAcceleration().at(0);
@@ -761,7 +762,7 @@ geometry_msgs::Vector3Stamped hiros::xsens_mtw::Wrapper::getAngularVelocityMsg()
 {
   geometry_msgs::Vector3Stamped out_msg;
   out_msg.header.stamp = m_timestamps_buffer.at(m_latest_packet->deviceId()).front();
-  out_msg.header.frame_id = getDeviceLabel(m_latest_packet->deviceId());
+  out_msg.header.frame_id = m_wrapper_params.tf_prefix + getDeviceLabel(m_latest_packet->deviceId());
 
   if (m_latest_packet->containsCalibratedGyroscopeData()) {
     out_msg.vector.x = m_latest_packet->calibratedGyroscopeData().at(0);
@@ -781,7 +782,7 @@ sensor_msgs::MagneticField hiros::xsens_mtw::Wrapper::getMagMsg() const
 {
   sensor_msgs::MagneticField out_msg;
   out_msg.header.stamp = m_timestamps_buffer.at(m_latest_packet->deviceId()).front();
-  out_msg.header.frame_id = getDeviceLabel(m_latest_packet->deviceId());
+  out_msg.header.frame_id = m_wrapper_params.tf_prefix + getDeviceLabel(m_latest_packet->deviceId());
 
   if (m_latest_packet->containsCalibratedMagneticField()) {
     out_msg.magnetic_field.x = m_latest_packet->calibratedMagneticField().at(0) * 1e-4; // G to T
@@ -803,7 +804,7 @@ hiros_xsens_mtw_wrapper::Euler hiros::xsens_mtw::Wrapper::getEulerMsg() const
 {
   hiros_xsens_mtw_wrapper::Euler out_msg;
   out_msg.header.stamp = m_timestamps_buffer.at(m_latest_packet->deviceId()).front();
-  out_msg.header.frame_id = getDeviceLabel(m_latest_packet->deviceId());
+  out_msg.header.frame_id = m_wrapper_params.tf_prefix + getDeviceLabel(m_latest_packet->deviceId());
 
   if (m_latest_packet->containsOrientation()) {
     // roll = atan2(2 * (qw * qx + qy * qz), (1 - 2 * (pow(qx, 2) + pow(qy, 2))))
@@ -826,7 +827,7 @@ geometry_msgs::QuaternionStamped hiros::xsens_mtw::Wrapper::getQuaternionMsg() c
 {
   geometry_msgs::QuaternionStamped out_msg;
   out_msg.header.stamp = m_timestamps_buffer.at(m_latest_packet->deviceId()).front();
-  out_msg.header.frame_id = getDeviceLabel(m_latest_packet->deviceId());
+  out_msg.header.frame_id = m_wrapper_params.tf_prefix + getDeviceLabel(m_latest_packet->deviceId());
 
   if (m_latest_packet->containsOrientation()) {
     out_msg.quaternion.x = m_latest_packet->orientationQuaternion().x();
@@ -848,7 +849,7 @@ geometry_msgs::Vector3Stamped hiros::xsens_mtw::Wrapper::getFreeAccelerationMsg(
 {
   geometry_msgs::Vector3Stamped out_msg;
   out_msg.header.stamp = m_timestamps_buffer.at(m_latest_packet->deviceId()).front();
-  out_msg.header.frame_id = getDeviceLabel(m_latest_packet->deviceId());
+  out_msg.header.frame_id = m_wrapper_params.tf_prefix + getDeviceLabel(m_latest_packet->deviceId());
 
   if (m_latest_packet->containsFreeAcceleration()) {
     out_msg.vector.x = m_latest_packet->freeAcceleration().at(0);
@@ -868,7 +869,7 @@ sensor_msgs::FluidPressure hiros::xsens_mtw::Wrapper::getPressureMsg() const
 {
   sensor_msgs::FluidPressure out_msg;
   out_msg.header.stamp = m_timestamps_buffer.at(m_latest_packet->deviceId()).front();
-  out_msg.header.frame_id = getDeviceLabel(m_latest_packet->deviceId());
+  out_msg.header.frame_id = m_wrapper_params.tf_prefix + getDeviceLabel(m_latest_packet->deviceId());
 
   if (m_latest_packet->containsPressure()) {
     out_msg.fluid_pressure = m_latest_packet->pressure().m_pressure;
@@ -887,7 +888,7 @@ geometry_msgs::TransformStamped hiros::xsens_mtw::Wrapper::getTf() const
   geometry_msgs::TransformStamped tf;
   tf.header.stamp = m_timestamps_buffer.at(m_latest_packet->deviceId()).front();
   tf.header.frame_id = "world";
-  tf.child_frame_id = getDeviceLabel(m_latest_packet->deviceId());
+  tf.child_frame_id = m_wrapper_params.tf_prefix + getDeviceLabel(m_latest_packet->deviceId());
 
   tf.transform.translation.x = 0.0;
   tf.transform.translation.y = 0.0;
