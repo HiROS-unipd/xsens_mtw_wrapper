@@ -2,7 +2,7 @@
 #define hiros_xsens_mtw_mtwCallback_h
 
 // Standard dependencies
-#include <list>
+#include <deque>
 
 // Xsens dependencies
 #include "xsensdeviceapi.h"
@@ -22,8 +22,7 @@ namespace hiros {
       bool dataAvailable() const;
       bool newDataAvailable();
 
-      XsDataPacket const* getOldestPacket() const;
-      XsDataPacket const* getLatestPacket() const;
+      XsDataPacket const* getLatestPacket();
 
       void deleteOldestPacket();
       void deleteOldestPackets(const unsigned long& t_n_packets);
@@ -36,8 +35,8 @@ namespace hiros {
 
     private:
       mutable XsMutex m_mutex;
-      std::list<XsDataPacket> m_packet_buffer;
-      size_t m_buffer_size;
+      std::deque<XsDataPacket> m_packet_buffer;
+      unsigned long m_read_packets;
       int m_mtw_index;
       XsDevice* m_device;
     };

@@ -2,7 +2,7 @@
 #include "xsens_mtw/MtwCallback.h"
 
 hiros::xsens_mtw::MtwCallback::MtwCallback(int t_mtw_index, XsDevice* t_device)
-  : m_buffer_size(0)
+  : m_read_packets(0)
   , m_mtw_index(t_mtw_index)
   , m_device(t_device)
 {}
@@ -16,39 +16,29 @@ bool hiros::xsens_mtw::MtwCallback::dataAvailable() const
 bool hiros::xsens_mtw::MtwCallback::newDataAvailable()
 {
   XsMutexLocker lock(m_mutex);
-  bool new_data_availabe = (m_packet_buffer.size() > m_buffer_size);
-  m_buffer_size = m_packet_buffer.size();
+  bool new_data_availabe = (m_packet_buffer.size() > m_read_packets);
   return new_data_availabe;
 }
 
-XsDataPacket const* hiros::xsens_mtw::MtwCallback::getOldestPacket() const
+XsDataPacket const* hiros::xsens_mtw::MtwCallback::getLatestPacket()
 {
   XsMutexLocker lock(m_mutex);
-  XsDataPacket const* packet = &m_packet_buffer.front();
-  return packet;
-}
-
-XsDataPacket const* hiros::xsens_mtw::MtwCallback::getLatestPacket() const
-{
-  XsMutexLocker lock(m_mutex);
-  XsDataPacket const* packet = &m_packet_buffer.back();
-  return packet;
+  ++m_read_packets;
+  return &m_packet_buffer.at(m_read_packets - 1);
 }
 
 void hiros::xsens_mtw::MtwCallback::deleteOldestPacket()
 {
   XsMutexLocker lock(m_mutex);
   m_packet_buffer.pop_front();
-  --m_buffer_size;
+  --m_read_packets;
 }
 
 void hiros::xsens_mtw::MtwCallback::deleteOldestPackets(const unsigned long& t_n_packets)
 {
   XsMutexLocker lock(m_mutex);
-  for (unsigned int i = 0; i < t_n_packets; ++i) {
-    m_packet_buffer.pop_front();
-  }
-  m_buffer_size -= t_n_packets;
+  m_packet_buffer.erase(m_packet_buffer.begin(), m_packet_buffer.begin() + static_cast<long>(t_n_packets));
+  m_read_packets -= t_n_packets;
 }
 
 XsDevice const& hiros::xsens_mtw::MtwCallback::device() const
