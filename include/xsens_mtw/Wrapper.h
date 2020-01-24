@@ -85,18 +85,16 @@ namespace hiros {
       bool setRadioChannel();
       bool disableRadio();
 
-      void initializeTimestampsBuffer();
       void setupRos();
       bool resetInitialOrientation() const;
+      void syncInitialPackets();
+
       std::string getDeviceLabel(const XsDeviceId& t_id) const;
       XsDeviceId getDeviceId(const std::string t_label) const;
       std::string composeTopicPrefix(const XsDeviceId& t_id) const;
 
-      void updateTimestampsBuffer();
-      void addTimestampsToBuffer();
-      void restructureTimestampsBuffer();
-
       void publishData();
+      std_msgs::Header getHeader() const;
       sensor_msgs::Imu getImuMsg() const;
       geometry_msgs::Vector3Stamped getAccelerationMsg() const;
       geometry_msgs::Vector3Stamped getAngularVelocityMsg() const;
@@ -133,10 +131,9 @@ namespace hiros {
       std::map<XsDeviceId, std::string> m_ids_to_labels;
       std::map<std::string, XsDeviceId> m_labels_to_ids;
 
-      const double m_max_timestamps_buffer_size = 9;
-
+      long m_initial_packet_id;
+      ros::Time m_initial_timestamp;
       const XsDataPacket* m_latest_packet;
-      std::map<XsDeviceId, std::deque<ros::Time>> m_timestamps_buffer;
 
       bool m_xsens_mtw_configured;
 
