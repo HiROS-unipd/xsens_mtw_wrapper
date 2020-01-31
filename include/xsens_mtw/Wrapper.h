@@ -93,17 +93,17 @@ namespace hiros {
       XsDeviceId getDeviceId(const std::string t_label) const;
       std::string composeTopicPrefix(const XsDeviceId& t_id) const;
 
-      void publishData();
-      std_msgs::Header getHeader() const;
-      sensor_msgs::Imu getImuMsg() const;
-      geometry_msgs::Vector3Stamped getAccelerationMsg() const;
-      geometry_msgs::Vector3Stamped getAngularVelocityMsg() const;
-      sensor_msgs::MagneticField getMagMsg() const;
-      hiros_xsens_mtw_wrapper::Euler getEulerMsg() const;
-      geometry_msgs::QuaternionStamped getQuaternionMsg() const;
-      geometry_msgs::Vector3Stamped getFreeAccelerationMsg() const;
-      sensor_msgs::FluidPressure getPressureMsg() const;
-      geometry_msgs::TransformStamped getTf() const;
+      void publishData(const std::shared_ptr<XsDataPacket>& t_packet);
+      std_msgs::Header getHeader(const std::shared_ptr<XsDataPacket>& t_packet) const;
+      sensor_msgs::Imu getImuMsg(const std::shared_ptr<XsDataPacket>& t_packet) const;
+      geometry_msgs::Vector3Stamped getAccelerationMsg(const std::shared_ptr<XsDataPacket>& t_packet) const;
+      geometry_msgs::Vector3Stamped getAngularVelocityMsg(const std::shared_ptr<XsDataPacket>& t_packet) const;
+      sensor_msgs::MagneticField getMagMsg(const std::shared_ptr<XsDataPacket>& t_packet) const;
+      hiros_xsens_mtw_wrapper::Euler getEulerMsg(const std::shared_ptr<XsDataPacket>& t_packet) const;
+      geometry_msgs::QuaternionStamped getQuaternionMsg(const std::shared_ptr<XsDataPacket>& t_packet) const;
+      geometry_msgs::Vector3Stamped getFreeAccelerationMsg(const std::shared_ptr<XsDataPacket>& t_packet) const;
+      sensor_msgs::FluidPressure getPressureMsg(const std::shared_ptr<XsDataPacket>& t_packet) const;
+      geometry_msgs::TransformStamped getTf(const std::shared_ptr<XsDataPacket>& t_packet) const;
 
       bool resetOrientation(hiros_xsens_mtw_wrapper::ResetOrientation::Request& t_req,
                             hiros_xsens_mtw_wrapper::ResetOrientation::Response& t_res);
@@ -133,7 +133,6 @@ namespace hiros {
 
       long m_initial_packet_id;
       ros::Time m_initial_timestamp;
-      std::shared_ptr<XsDataPacket> m_latest_packet;
 
       bool m_xsens_mtw_configured;
 
