@@ -20,11 +20,11 @@ bool hiros::xsens_mtw::MtwCallback::newDataAvailable()
   return new_data_availabe;
 }
 
-XsDataPacket const* hiros::xsens_mtw::MtwCallback::getLatestPacket()
+std::shared_ptr<XsDataPacket> hiros::xsens_mtw::MtwCallback::getLatestPacket()
 {
   XsMutexLocker lock(m_mutex);
   ++m_read_packets;
-  return &m_packet_buffer.at(m_read_packets - 1);
+  return std::make_shared<XsDataPacket>(m_packet_buffer.at(m_read_packets - 1));
 }
 
 void hiros::xsens_mtw::MtwCallback::deleteOldestPacket()

@@ -3,6 +3,7 @@
 
 // Standard dependencies
 #include <deque>
+#include <memory>
 
 // Xsens dependencies
 #include "xsensdeviceapi.h"
@@ -22,7 +23,7 @@ namespace hiros {
       bool dataAvailable() const;
       bool newDataAvailable();
 
-      XsDataPacket const* getLatestPacket();
+      std::shared_ptr<XsDataPacket> getLatestPacket();
 
       void deleteOldestPacket();
       void deleteOldestPackets(const unsigned long& t_n_packets);

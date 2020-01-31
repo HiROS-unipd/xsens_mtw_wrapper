@@ -133,7 +133,7 @@ namespace hiros {
 
       long m_initial_packet_id;
       ros::Time m_initial_timestamp;
-      const XsDataPacket* m_latest_packet;
+      std::shared_ptr<XsDataPacket> m_latest_packet;
 
       bool m_xsens_mtw_configured;
 
