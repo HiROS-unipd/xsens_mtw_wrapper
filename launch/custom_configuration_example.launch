@@ -11,11 +11,8 @@
     <arg name="sync_policy"               value="fill_partial_frames" />
 
     <arg name="publish_imu"               value="true"                />
-    <arg name="publish_acceleration"      value="false"               />
-    <arg name="publish_angular_velocity"  value="false"               />
     <arg name="publish_mag"               value="true"                />
     <arg name="publish_euler"             value="true"                />
-    <arg name="publish_quaternion"        value="false"               />
     <arg name="publish_free_acceleration" value="false"               />
     <arg name="publish_pressure"          value="false"               />
     <arg name="publish_tf"                value="true"                />

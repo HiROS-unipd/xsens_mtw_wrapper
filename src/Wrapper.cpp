@@ -143,22 +143,17 @@ void hiros::xsens_mtw::Wrapper::configureWrapper()
   }
 
   m_nh.getParam("publish_imu", m_wrapper_params.publish_imu);
-  m_nh.getParam("publish_acceleration", m_wrapper_params.publish_acceleration);
-  m_nh.getParam("publish_angular_velocity", m_wrapper_params.publish_angular_velocity);
   m_nh.getParam("publish_mag", m_wrapper_params.publish_mag);
   m_nh.getParam("publish_euler", m_wrapper_params.publish_euler);
-  m_nh.getParam("publish_quaternion", m_wrapper_params.publish_quaternion);
   m_nh.getParam("publish_free_acceleration", m_wrapper_params.publish_free_acceleration);
   m_nh.getParam("publish_pressure", m_wrapper_params.publish_pressure);
   m_nh.getParam("publish_tf", m_wrapper_params.publish_tf);
 
-  bool nothing_to_publish =
-    (!m_wrapper_params.publish_imu && !m_wrapper_params.publish_acceleration
-     && !m_wrapper_params.publish_angular_velocity && !m_wrapper_params.publish_mag && !m_wrapper_params.publish_euler
-     && !m_wrapper_params.publish_quaternion && !m_wrapper_params.publish_free_acceleration
-     && !m_wrapper_params.publish_pressure && !m_wrapper_params.publish_tf);
+  m_wrapper_params.publish_mimu_array =
+    (m_wrapper_params.publish_imu || m_wrapper_params.publish_mag || m_wrapper_params.publish_euler
+     || m_wrapper_params.publish_free_acceleration || m_wrapper_params.publish_pressure);
 
-  if (nothing_to_publish) {
+  if (!m_wrapper_params.publish_mimu_array && !m_wrapper_params.publish_tf) {
     ROS_FATAL_STREAM("Xsens Mtw Wrapper... Nothing to publish. Closing");
     ros::shutdown();
   }
@@ -221,70 +216,9 @@ void hiros::xsens_mtw::Wrapper::stopXsensMtw()
 
 void hiros::xsens_mtw::Wrapper::stopWrapper()
 {
-  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Shutting down ROS publishers");
-
-  if (m_wrapper_params.publish_imu) {
-    for (auto& pub : m_imu_pubs) {
-      if (pub.second) {
-        pub.second.shutdown();
-      }
-    }
-  }
-
-  if (m_wrapper_params.publish_acceleration) {
-    for (auto& pub : m_acceleration_pubs) {
-      if (pub.second) {
-        pub.second.shutdown();
-      }
-    }
-  }
-
-  if (m_wrapper_params.publish_angular_velocity) {
-    for (auto& pub : m_angular_velocity_pubs) {
-      if (pub.second) {
-        pub.second.shutdown();
-      }
-    }
-  }
-
-  if (m_wrapper_params.publish_mag) {
-    for (auto& pub : m_mag_pubs) {
-      if (pub.second) {
-        pub.second.shutdown();
-      }
-    }
-  }
-
-  if (m_wrapper_params.publish_euler) {
-    for (auto& pub : m_euler_pubs) {
-      if (pub.second) {
-        pub.second.shutdown();
-      }
-    }
-  }
-
-  if (m_wrapper_params.publish_quaternion) {
-    for (auto& pub : m_quaternion_pubs) {
-      if (pub.second) {
-        pub.second.shutdown();
-      }
-    }
-  }
-
-  if (m_wrapper_params.publish_free_acceleration) {
-    for (auto& pub : m_free_acceleration_pubs) {
-      if (pub.second) {
-        pub.second.shutdown();
-      }
-    }
-  }
-
-  if (m_wrapper_params.publish_pressure) {
-    for (auto& pub : m_pressure_pubs) {
-      if (pub.second) {
-        pub.second.shutdown();
-      }
-    }
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Shutting down ROS publisher");
+  if (m_data_pub) {
+    m_data_pub.shutdown();
   }
 
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Shutting down ROS service server");
@@ -525,51 +459,8 @@ void hiros::xsens_mtw::Wrapper::setupRos()
 
   m_reset_orientation_srv = m_nh.advertiseService("reset_orientation", &Wrapper::resetOrientation, this);
 
-  for (auto& device : m_connected_devices) {
-    if (m_wrapper_params.publish_imu) {
-      m_imu_pubs.emplace(device.first,
-                         m_nh.advertise<sensor_msgs::Imu>(composeTopicPrefix(device.first) + "/imu/data", 10));
-    }
-
-    if (m_wrapper_params.publish_acceleration) {
-      m_acceleration_pubs.emplace(
-        device.first,
-        m_nh.advertise<geometry_msgs::Vector3Stamped>(composeTopicPrefix(device.first) + "/imu/acceleration", 10));
-    }
-
-    if (m_wrapper_params.publish_angular_velocity) {
-      m_angular_velocity_pubs.emplace(
-        device.first,
-        m_nh.advertise<geometry_msgs::Vector3Stamped>(composeTopicPrefix(device.first) + "/imu/angular_velocity", 10));
-    }
-
-    if (m_wrapper_params.publish_mag) {
-      m_mag_pubs.emplace(device.first,
-                         m_nh.advertise<sensor_msgs::MagneticField>(composeTopicPrefix(device.first) + "/imu/mag", 10));
-    }
-
-    if (m_wrapper_params.publish_euler) {
-      m_euler_pubs.emplace(
-        device.first,
-        m_nh.advertise<hiros_xsens_mtw_wrapper::Euler>(composeTopicPrefix(device.first) + "/imu/euler", 10));
-    }
-
-    if (m_wrapper_params.publish_quaternion) {
-      m_quaternion_pubs.emplace(
-        device.first,
-        m_nh.advertise<geometry_msgs::QuaternionStamped>(composeTopicPrefix(device.first) + "/filter/quaternion", 10));
-    }
-
-    if (m_wrapper_params.publish_free_acceleration) {
-      m_free_acceleration_pubs.emplace(device.first,
-                                       m_nh.advertise<geometry_msgs::Vector3Stamped>(
-                                         composeTopicPrefix(device.first) + "/filter/free_acceleration", 10));
-    }
-
-    if (m_wrapper_params.publish_pressure) {
-      m_pressure_pubs.emplace(
-        device.first, m_nh.advertise<sensor_msgs::FluidPressure>(composeTopicPrefix(device.first) + "/pressure", 10));
-    }
+  if (m_wrapper_params.publish_mimu_array) {
+    m_data_pub = m_nh.advertise<hiros_xsens_mtw_wrapper::MIMUArray>("data", 1);
   }
 }
 
@@ -669,42 +560,12 @@ std::string hiros::xsens_mtw::Wrapper::composeTopicPrefix(const XsDeviceId& t_id
 
 void hiros::xsens_mtw::Wrapper::publishData(const std::vector<std::shared_ptr<XsDataPacket>>& t_frame)
 {
-  for (auto& packet : t_frame) {
-    XsDeviceId id = packet->deviceId();
+  if (m_wrapper_params.publish_mimu_array) {
+    m_data_pub.publish(getMIMUArrayMsg(t_frame));
+  }
 
-    if (m_wrapper_params.publish_imu) {
-      m_imu_pubs.at(id).publish(getImuMsg(packet));
-    }
-
-    if (m_wrapper_params.publish_acceleration) {
-      m_acceleration_pubs.at(id).publish(getAccelerationMsg(packet));
-    }
-
-    if (m_wrapper_params.publish_angular_velocity) {
-      m_angular_velocity_pubs.at(id).publish(getAngularVelocityMsg(packet));
-    }
-
-    if (m_wrapper_params.publish_mag) {
-      m_mag_pubs.at(id).publish(getMagMsg(packet));
-    }
-
-    if (m_wrapper_params.publish_euler) {
-      m_euler_pubs.at(id).publish(getEulerMsg(packet));
-    }
-
-    if (m_wrapper_params.publish_quaternion) {
-      m_quaternion_pubs.at(id).publish(getQuaternionMsg(packet));
-    }
-
-    if (m_wrapper_params.publish_free_acceleration) {
-      m_free_acceleration_pubs.at(id).publish(getFreeAccelerationMsg(packet));
-    }
-
-    if (m_wrapper_params.publish_pressure) {
-      m_pressure_pubs.at(id).publish(getPressureMsg(packet));
-    }
-
-    if (m_wrapper_params.publish_tf) {
+  if (m_wrapper_params.publish_tf) {
+    for (auto& packet : t_frame) {
       if (packet->containsOrientation()) {
         m_tf_broadcaster.sendTransform(getTf(packet));
       }
@@ -717,6 +578,8 @@ void hiros::xsens_mtw::Wrapper::publishData(const std::vector<std::shared_ptr<Xs
 std_msgs::Header hiros::xsens_mtw::Wrapper::getHeader(const std::shared_ptr<XsDataPacket>& t_packet) const
 {
   std_msgs::Header header;
+
+  header.seq = static_cast<unsigned int>(t_packet->packetId());
   header.stamp = m_initial_timestamp
                  + ros::Duration((t_packet->packetId() - m_initial_packet_id) / static_cast<double>(m_update_rate));
   header.frame_id = m_wrapper_params.tf_prefix + getDeviceLabel(t_packet->deviceId());
@@ -773,46 +636,6 @@ sensor_msgs::Imu hiros::xsens_mtw::Wrapper::getImuMsg(const std::shared_ptr<XsDa
   return out_msg;
 }
 
-geometry_msgs::Vector3Stamped
-hiros::xsens_mtw::Wrapper::getAccelerationMsg(const std::shared_ptr<XsDataPacket>& t_packet) const
-{
-  geometry_msgs::Vector3Stamped out_msg;
-  out_msg.header = getHeader(t_packet);
-
-  if (t_packet->containsCalibratedAcceleration()) {
-    out_msg.vector.x = t_packet->calibratedAcceleration().at(0);
-    out_msg.vector.y = t_packet->calibratedAcceleration().at(1);
-    out_msg.vector.z = t_packet->calibratedAcceleration().at(2);
-  }
-  else {
-    out_msg.vector.x = std::numeric_limits<double>::quiet_NaN();
-    out_msg.vector.y = std::numeric_limits<double>::quiet_NaN();
-    out_msg.vector.z = std::numeric_limits<double>::quiet_NaN();
-  }
-
-  return out_msg;
-}
-
-geometry_msgs::Vector3Stamped
-hiros::xsens_mtw::Wrapper::getAngularVelocityMsg(const std::shared_ptr<XsDataPacket>& t_packet) const
-{
-  geometry_msgs::Vector3Stamped out_msg;
-  out_msg.header = getHeader(t_packet);
-
-  if (t_packet->containsCalibratedGyroscopeData()) {
-    out_msg.vector.x = t_packet->calibratedGyroscopeData().at(0);
-    out_msg.vector.y = t_packet->calibratedGyroscopeData().at(1);
-    out_msg.vector.z = t_packet->calibratedGyroscopeData().at(2);
-  }
-  else {
-    out_msg.vector.x = std::numeric_limits<double>::quiet_NaN();
-    out_msg.vector.y = std::numeric_limits<double>::quiet_NaN();
-    out_msg.vector.z = std::numeric_limits<double>::quiet_NaN();
-  }
-
-  return out_msg;
-}
-
 sensor_msgs::MagneticField hiros::xsens_mtw::Wrapper::getMagMsg(const std::shared_ptr<XsDataPacket>& t_packet) const
 {
   sensor_msgs::MagneticField out_msg;
@@ -857,28 +680,6 @@ hiros::xsens_mtw::Wrapper::getEulerMsg(const std::shared_ptr<XsDataPacket>& t_pa
   return out_msg;
 }
 
-geometry_msgs::QuaternionStamped
-hiros::xsens_mtw::Wrapper::getQuaternionMsg(const std::shared_ptr<XsDataPacket>& t_packet) const
-{
-  geometry_msgs::QuaternionStamped out_msg;
-  out_msg.header = getHeader(t_packet);
-
-  if (t_packet->containsOrientation()) {
-    out_msg.quaternion.x = t_packet->orientationQuaternion().x();
-    out_msg.quaternion.y = t_packet->orientationQuaternion().y();
-    out_msg.quaternion.z = t_packet->orientationQuaternion().z();
-    out_msg.quaternion.w = t_packet->orientationQuaternion().w();
-  }
-  else {
-    out_msg.quaternion.x = std::numeric_limits<double>::quiet_NaN();
-    out_msg.quaternion.y = std::numeric_limits<double>::quiet_NaN();
-    out_msg.quaternion.z = std::numeric_limits<double>::quiet_NaN();
-    out_msg.quaternion.w = std::numeric_limits<double>::quiet_NaN();
-  }
-
-  return out_msg;
-}
-
 geometry_msgs::Vector3Stamped
 hiros::xsens_mtw::Wrapper::getFreeAccelerationMsg(const std::shared_ptr<XsDataPacket>& t_packet) const
 {
@@ -912,6 +713,45 @@ hiros::xsens_mtw::Wrapper::getPressureMsg(const std::shared_ptr<XsDataPacket>& t
   else {
     out_msg.fluid_pressure = std::numeric_limits<double>::quiet_NaN();
     out_msg.variance = -1.0;
+  }
+
+  return out_msg;
+}
+
+hiros_xsens_mtw_wrapper::MIMU hiros::xsens_mtw::Wrapper::getMIMUMsg(const std::shared_ptr<XsDataPacket>& t_packet) const
+{
+  hiros_xsens_mtw_wrapper::MIMU out_msg;
+
+  if (m_wrapper_params.publish_imu) {
+    out_msg.imu = getImuMsg(t_packet);
+  }
+
+  if (m_wrapper_params.publish_mag) {
+    out_msg.mag = getMagMsg(t_packet);
+  }
+
+  if (m_wrapper_params.publish_euler) {
+    out_msg.euler = getEulerMsg(t_packet);
+  }
+
+  if (m_wrapper_params.publish_free_acceleration) {
+    out_msg.free_acceleration = getFreeAccelerationMsg(t_packet);
+  }
+
+  if (m_wrapper_params.publish_pressure) {
+    out_msg.pressure = getPressureMsg(t_packet);
+  }
+
+  return out_msg;
+}
+
+hiros_xsens_mtw_wrapper::MIMUArray
+hiros::xsens_mtw::Wrapper::getMIMUArrayMsg(const std::vector<std::shared_ptr<XsDataPacket>>& t_frame) const
+{
+  hiros_xsens_mtw_wrapper::MIMUArray out_msg;
+
+  for (auto& packet : t_frame) {
+    out_msg.mimus.push_back(getMIMUMsg(packet));
   }
 
   return out_msg;

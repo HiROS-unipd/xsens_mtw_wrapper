@@ -6,16 +6,18 @@
 #include <deque>
 
 // ROS dependencies
-#include "geometry_msgs/QuaternionStamped.h"
 #include "geometry_msgs/Vector3Stamped.h"
 #include "ros/ros.h"
 #include "sensor_msgs/FluidPressure.h"
 #include "sensor_msgs/Imu.h"
 #include "sensor_msgs/MagneticField.h"
+#include "std_msgs/Header.h"
 #include "tf2_ros/transform_broadcaster.h"
 
 // Internal dependencies
 #include "hiros_xsens_mtw_wrapper/Euler.h"
+#include "hiros_xsens_mtw_wrapper/MIMU.h"
+#include "hiros_xsens_mtw_wrapper/MIMUArray.h"
 #include "hiros_xsens_mtw_wrapper/ResetOrientation.h"
 #include "xsens_mtw/MtwCallback.h"
 #include "xsens_mtw/Synchronizer.h"
@@ -45,12 +47,10 @@ namespace hiros {
       bool enable_custom_labeling;
       std::string sync_policy_name;
 
+      bool publish_mimu_array;
       bool publish_imu;
-      bool publish_acceleration;
-      bool publish_angular_velocity;
       bool publish_mag;
       bool publish_euler;
-      bool publish_quaternion;
       bool publish_free_acceleration;
       bool publish_pressure;
       bool publish_tf;
@@ -102,13 +102,13 @@ namespace hiros {
       void publishData(const std::vector<std::shared_ptr<XsDataPacket>>& t_frame);
       std_msgs::Header getHeader(const std::shared_ptr<XsDataPacket>& t_packet) const;
       sensor_msgs::Imu getImuMsg(const std::shared_ptr<XsDataPacket>& t_packet) const;
-      geometry_msgs::Vector3Stamped getAccelerationMsg(const std::shared_ptr<XsDataPacket>& t_packet) const;
-      geometry_msgs::Vector3Stamped getAngularVelocityMsg(const std::shared_ptr<XsDataPacket>& t_packet) const;
       sensor_msgs::MagneticField getMagMsg(const std::shared_ptr<XsDataPacket>& t_packet) const;
       hiros_xsens_mtw_wrapper::Euler getEulerMsg(const std::shared_ptr<XsDataPacket>& t_packet) const;
-      geometry_msgs::QuaternionStamped getQuaternionMsg(const std::shared_ptr<XsDataPacket>& t_packet) const;
       geometry_msgs::Vector3Stamped getFreeAccelerationMsg(const std::shared_ptr<XsDataPacket>& t_packet) const;
       sensor_msgs::FluidPressure getPressureMsg(const std::shared_ptr<XsDataPacket>& t_packet) const;
+      hiros_xsens_mtw_wrapper::MIMU getMIMUMsg(const std::shared_ptr<XsDataPacket>& t_packet) const;
+      hiros_xsens_mtw_wrapper::MIMUArray
+      getMIMUArrayMsg(const std::vector<std::shared_ptr<XsDataPacket>>& t_frame) const;
       geometry_msgs::TransformStamped getTf(const std::shared_ptr<XsDataPacket>& t_packet) const;
 
       bool resetOrientation(hiros_xsens_mtw_wrapper::ResetOrientation::Request& t_req,
@@ -146,14 +146,7 @@ namespace hiros {
       std::string m_node_namespace;
 
       ros::ServiceServer m_reset_orientation_srv;
-      std::map<XsDeviceId, ros::Publisher> m_imu_pubs;
-      std::map<XsDeviceId, ros::Publisher> m_acceleration_pubs;
-      std::map<XsDeviceId, ros::Publisher> m_angular_velocity_pubs;
-      std::map<XsDeviceId, ros::Publisher> m_mag_pubs;
-      std::map<XsDeviceId, ros::Publisher> m_euler_pubs;
-      std::map<XsDeviceId, ros::Publisher> m_quaternion_pubs;
-      std::map<XsDeviceId, ros::Publisher> m_free_acceleration_pubs;
-      std::map<XsDeviceId, ros::Publisher> m_pressure_pubs;
+      ros::Publisher m_data_pub;
       tf2_ros::TransformBroadcaster m_tf_broadcaster;
 
       static bool s_request_shutdown;

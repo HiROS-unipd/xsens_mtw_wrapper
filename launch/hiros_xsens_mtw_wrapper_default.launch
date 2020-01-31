@@ -13,11 +13,8 @@
   <arg name="sync_policy"               default="skip_partial_frames" />
 
   <arg name="publish_imu"               default="true"                />
-  <arg name="publish_acceleration"      default="true"                />
-  <arg name="publish_angular_velocity"  default="true"                />
   <arg name="publish_mag"               default="true"                />
   <arg name="publish_euler"             default="true"                />
-  <arg name="publish_quaternion"        default="true"                />
   <arg name="publish_free_acceleration" default="true"                />
   <arg name="publish_pressure"          default="true"                />
   <arg name="publish_tf"                default="true"                />
@@ -36,11 +33,8 @@
     <param name="sync_policy"               type="string" value="$(arg sync_policy)"               />
 
     <param name="publish_imu"               type="bool"   value="$(arg publish_imu)"               />
-    <param name="publish_acceleration"      type="bool"   value="$(arg publish_acceleration)"      />
-    <param name="publish_angular_velocity"  type="bool"   value="$(arg publish_angular_velocity)"  />
     <param name="publish_mag"               type="bool"   value="$(arg publish_mag)"               />
     <param name="publish_euler"             type="bool"   value="$(arg publish_euler)"             />
-    <param name="publish_quaternion"        type="bool"   value="$(arg publish_quaternion)"        />
     <param name="publish_free_acceleration" type="bool"   value="$(arg publish_free_acceleration)" />
     <param name="publish_pressure"          type="bool"   value="$(arg publish_pressure)"          />
     <param name="publish_tf"                type="bool"   value="$(arg publish_tf)"                />

@@ -28,7 +28,9 @@ find_package(catkin REQUIRED
 # ##############################################################################
 
 # Generate messages in the 'msg' folder
-add_message_files(FILES Euler.msg)
+add_message_files(FILES Euler.msg
+                        MIMU.msg
+                        MIMUArray.msg)
 
 # Generate services in the 'srv' folder
 add_service_files(FILES ResetOrientation.srv)
@@ -36,6 +38,7 @@ add_service_files(FILES ResetOrientation.srv)
 # Generate added messages and services with any dependencies listed here
 generate_messages(DEPENDENCIES
                   geometry_msgs
+                  sensor_msgs
                   std_msgs)
 
 # ##############################################################################
