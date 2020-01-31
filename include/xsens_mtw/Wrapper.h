@@ -18,6 +18,7 @@
 #include "hiros_xsens_mtw_wrapper/Euler.h"
 #include "hiros_xsens_mtw_wrapper/ResetOrientation.h"
 #include "xsens_mtw/MtwCallback.h"
+#include "xsens_mtw/Synchronizer.h"
 #include "xsens_mtw/WirelessMasterCallback.h"
 
 #define BASH_MSG_RESET "\033[0m"
@@ -25,6 +26,10 @@
 
 namespace hiros {
   namespace xsens_mtw {
+
+    static const std::map<std::string, Synchronizer::SyncPolicy> sync_policy_map = {
+      {"fill_partial_frames", Synchronizer::SyncPolicy::fillPartialFrames},
+      {"skip_partial_frames", Synchronizer::SyncPolicy::skipPartialFrames}};
 
     struct XsensMtwParameters
     {
@@ -38,6 +43,7 @@ namespace hiros {
     {
       std::string tf_prefix;
       bool enable_custom_labeling;
+      std::string sync_policy_name;
 
       bool publish_imu;
       bool publish_acceleration;
@@ -93,7 +99,7 @@ namespace hiros {
       XsDeviceId getDeviceId(const std::string t_label) const;
       std::string composeTopicPrefix(const XsDeviceId& t_id) const;
 
-      void publishData(const std::shared_ptr<XsDataPacket>& t_packet);
+      void publishData(const std::vector<std::shared_ptr<XsDataPacket>>& t_frame);
       std_msgs::Header getHeader(const std::shared_ptr<XsDataPacket>& t_packet) const;
       sensor_msgs::Imu getImuMsg(const std::shared_ptr<XsDataPacket>& t_packet) const;
       geometry_msgs::Vector3Stamped getAccelerationMsg(const std::shared_ptr<XsDataPacket>& t_packet) const;

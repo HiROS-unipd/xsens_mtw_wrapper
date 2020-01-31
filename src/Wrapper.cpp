@@ -69,12 +69,17 @@ void hiros::xsens_mtw::Wrapper::run()
 {
   ROS_INFO_STREAM(BASH_MSG_GREEN << "Xsens Mtw Wrapper... RUNNING" << BASH_MSG_RESET);
 
+  Synchronizer sync(m_mtw_callbacks, sync_policy_map.at(m_wrapper_params.sync_policy_name));
+
   while (ros::ok() && !s_request_shutdown) {
     for (auto& device : m_connected_devices) {
       if (m_mtw_callbacks.at(device.first)->newDataAvailable()) {
-        std::shared_ptr<XsDataPacket> packet = m_mtw_callbacks.at(device.first)->getLatestPacket();
-        publishData(packet);
-        m_mtw_callbacks.at(device.first)->deleteOldestPacket();
+        sync.add(m_mtw_callbacks.at(device.first)->getLatestPacket());
+      }
+
+      if (sync.newFrameAvailable()) {
+        publishData(sync.getLatestFrame());
+        sync.clearLatestFrame();
       }
     }
   }
@@ -124,6 +129,18 @@ void hiros::xsens_mtw::Wrapper::configureWrapper()
 
   m_nh.getParam("tf_prefix", m_wrapper_params.tf_prefix);
   m_nh.getParam("enable_custom_labeling", m_wrapper_params.enable_custom_labeling);
+  m_nh.getParam("sync_policy", m_wrapper_params.sync_policy_name);
+  if (sync_policy_map.find(m_wrapper_params.sync_policy_name) == sync_policy_map.end()) {
+    ROS_WARN_STREAM("Xsens Mtw Wrapper... Sync policy " << m_wrapper_params.sync_policy_name << " is not supported");
+    std::string supported_policies;
+    for (auto& policy : sync_policy_map) {
+      supported_policies += (policy.first + ", ");
+    }
+    ROS_WARN_STREAM(
+      "Xsens Mtw Wrapper... Supported policies: " << supported_policies.erase(supported_policies.length() - 2));
+    ROS_WARN_STREAM("Xsens Mtw Wrapper... Using " << sync_policy_map.rbegin()->first << " policy");
+    m_wrapper_params.sync_policy_name = sync_policy_map.rbegin()->first;
+  }
 
   m_nh.getParam("publish_imu", m_wrapper_params.publish_imu);
   m_nh.getParam("publish_acceleration", m_wrapper_params.publish_acceleration);
@@ -650,45 +667,47 @@ std::string hiros::xsens_mtw::Wrapper::composeTopicPrefix(const XsDeviceId& t_id
   return "/" + m_node_namespace + "/" + getDeviceLabel(t_id);
 }
 
-void hiros::xsens_mtw::Wrapper::publishData(const std::shared_ptr<XsDataPacket>& t_packet)
+void hiros::xsens_mtw::Wrapper::publishData(const std::vector<std::shared_ptr<XsDataPacket>>& t_frame)
 {
-  XsDeviceId id = t_packet->deviceId();
+  for (auto& packet : t_frame) {
+    XsDeviceId id = packet->deviceId();
 
-  if (m_wrapper_params.publish_imu) {
-    m_imu_pubs.at(id).publish(getImuMsg(t_packet));
-  }
+    if (m_wrapper_params.publish_imu) {
+      m_imu_pubs.at(id).publish(getImuMsg(packet));
+    }
 
-  if (m_wrapper_params.publish_acceleration) {
-    m_acceleration_pubs.at(id).publish(getAccelerationMsg(t_packet));
-  }
+    if (m_wrapper_params.publish_acceleration) {
+      m_acceleration_pubs.at(id).publish(getAccelerationMsg(packet));
+    }
 
-  if (m_wrapper_params.publish_angular_velocity) {
-    m_angular_velocity_pubs.at(id).publish(getAngularVelocityMsg(t_packet));
-  }
+    if (m_wrapper_params.publish_angular_velocity) {
+      m_angular_velocity_pubs.at(id).publish(getAngularVelocityMsg(packet));
+    }
 
-  if (m_wrapper_params.publish_mag) {
-    m_mag_pubs.at(id).publish(getMagMsg(t_packet));
-  }
+    if (m_wrapper_params.publish_mag) {
+      m_mag_pubs.at(id).publish(getMagMsg(packet));
+    }
 
-  if (m_wrapper_params.publish_euler) {
-    m_euler_pubs.at(id).publish(getEulerMsg(t_packet));
-  }
+    if (m_wrapper_params.publish_euler) {
+      m_euler_pubs.at(id).publish(getEulerMsg(packet));
+    }
 
-  if (m_wrapper_params.publish_quaternion) {
-    m_quaternion_pubs.at(id).publish(getQuaternionMsg(t_packet));
-  }
+    if (m_wrapper_params.publish_quaternion) {
+      m_quaternion_pubs.at(id).publish(getQuaternionMsg(packet));
+    }
 
-  if (m_wrapper_params.publish_free_acceleration) {
-    m_free_acceleration_pubs.at(id).publish(getFreeAccelerationMsg(t_packet));
-  }
+    if (m_wrapper_params.publish_free_acceleration) {
+      m_free_acceleration_pubs.at(id).publish(getFreeAccelerationMsg(packet));
+    }
 
-  if (m_wrapper_params.publish_pressure) {
-    m_pressure_pubs.at(id).publish(getPressureMsg(t_packet));
-  }
+    if (m_wrapper_params.publish_pressure) {
+      m_pressure_pubs.at(id).publish(getPressureMsg(packet));
+    }
 
-  if (m_wrapper_params.publish_tf) {
-    if (t_packet->containsOrientation()) {
-      m_tf_broadcaster.sendTransform(getTf(t_packet));
+    if (m_wrapper_params.publish_tf) {
+      if (packet->containsOrientation()) {
+        m_tf_broadcaster.sendTransform(getTf(packet));
+      }
     }
   }
 

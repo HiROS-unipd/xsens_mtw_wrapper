@@ -73,6 +73,7 @@ add_custom_target(additional_files_${PROJECT_NAME} SOURCES ${FILES_LIST})
 # packages don't collide add_executable(${PROJECT_NAME}_node
 add_executable(${PROJECT_NAME}_node
                src/MtwCallback.cpp
+               src/Synchronizer.cpp
                src/WirelessMasterCallback.cpp
                src/Wrapper.cpp
                src/main.cpp
