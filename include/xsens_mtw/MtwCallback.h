@@ -36,7 +36,7 @@ namespace hiros {
     private:
       mutable XsMutex m_mutex;
       std::deque<XsDataPacket> m_packet_buffer;
-      unsigned long m_read_packets;
+      int m_read_packets;
       int m_mtw_index;
       XsDevice* m_device;
     };

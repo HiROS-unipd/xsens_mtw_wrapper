@@ -16,7 +16,7 @@ bool hiros::xsens_mtw::MtwCallback::dataAvailable() const
 bool hiros::xsens_mtw::MtwCallback::newDataAvailable()
 {
   XsMutexLocker lock(m_mutex);
-  bool new_data_availabe = (m_packet_buffer.size() > m_read_packets);
+  bool new_data_availabe = (m_packet_buffer.size() > static_cast<unsigned long>(m_read_packets));
   return new_data_availabe;
 }
 
@@ -53,5 +53,8 @@ void hiros::xsens_mtw::MtwCallback::onLiveDataAvailable(XsDevice* t_device, cons
   m_packet_buffer.push_back(*t_packet);
   if (m_packet_buffer.size() > 300) {
     deleteOldestPacket();
+    if (m_read_packets < 0) {
+      m_read_packets = 0;
+    }
   }
 }
