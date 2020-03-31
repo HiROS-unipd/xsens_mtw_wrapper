@@ -45,9 +45,11 @@ namespace hiros {
     {
       std::string tf_prefix;
       bool enable_custom_labeling;
-      std::string sync_policy_name;
 
+      bool synchronize;
+      std::string sync_policy_name;
       bool publish_mimu_array;
+
       bool publish_imu;
       bool publish_mag;
       bool publish_euler;
@@ -99,7 +101,9 @@ namespace hiros {
       XsDeviceId getDeviceId(const std::string t_label) const;
       std::string composeTopicPrefix(const XsDeviceId& t_id) const;
 
-      void publishData(const std::vector<std::shared_ptr<XsDataPacket>>& t_frame);
+      void publishPacket(const std::shared_ptr<XsDataPacket>& t_packet);
+      void publishFrame(const std::vector<std::shared_ptr<XsDataPacket>>& t_frame);
+
       std_msgs::Header getHeader(const std::shared_ptr<XsDataPacket>& t_packet) const;
       sensor_msgs::Imu getImuMsg(const std::shared_ptr<XsDataPacket>& t_packet) const;
       sensor_msgs::MagneticField getMagMsg(const std::shared_ptr<XsDataPacket>& t_packet) const;
@@ -145,8 +149,15 @@ namespace hiros {
       ros::NodeHandle m_nh;
       std::string m_node_namespace;
 
+      const unsigned int m_ros_topic_queue_size = 10;
+
       ros::ServiceServer m_reset_orientation_srv;
       ros::Publisher m_data_pub;
+      std::map<XsDeviceId, ros::Publisher> m_imu_pubs;
+      std::map<XsDeviceId, ros::Publisher> m_mag_pubs;
+      std::map<XsDeviceId, ros::Publisher> m_euler_pubs;
+      std::map<XsDeviceId, ros::Publisher> m_free_acceleration_pubs;
+      std::map<XsDeviceId, ros::Publisher> m_pressure_pubs;
       tf2_ros::TransformBroadcaster m_tf_broadcaster;
 
       static bool s_request_shutdown;

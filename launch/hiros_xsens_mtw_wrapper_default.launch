@@ -10,7 +10,10 @@
 
   <arg name="reset_initial_orientation" default="false"               />
   <arg name="enable_custom_labeling"    default="false"               />
+
+  <arg name="synchronize"               default="false"               />
   <arg name="sync_policy"               default="skip_partial_frames" />
+  <arg name="publish_mimu_array"        default="false"               />
 
   <arg name="publish_imu"               default="true"                />
   <arg name="publish_mag"               default="true"                />
@@ -30,7 +33,10 @@
 
     <param name="reset_initial_orientation" type="bool"   value="$(arg reset_initial_orientation)" />
     <param name="enable_custom_labeling"    type="bool"   value="$(arg enable_custom_labeling)"    />
+
+    <param name="synchronize"               type="bool"   value="$(arg synchronize)"               />
     <param name="sync_policy"               type="string" value="$(arg sync_policy)"               />
+    <param name="publish_mimu_array"        type="bool"   value="$(arg publish_mimu_array)"        />
 
     <param name="publish_imu"               type="bool"   value="$(arg publish_imu)"               />
     <param name="publish_mag"               type="bool"   value="$(arg publish_mag)"               />
