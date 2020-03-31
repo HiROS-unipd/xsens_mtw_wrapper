@@ -35,6 +35,8 @@ namespace hiros {
       virtual void onLiveDataAvailable(XsDevice* t_device, const XsDataPacket* t_packet);
 
     private:
+      const unsigned long m_max_buffer_size = 300;
+
       mutable XsMutex m_mutex;
       std::deque<XsDataPacket> m_packet_buffer;
       int m_read_packets;

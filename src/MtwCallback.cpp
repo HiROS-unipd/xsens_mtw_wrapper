@@ -1,3 +1,6 @@
+// Standard dependencies
+#include <iostream>
+
 // Internal dependencies
 #include "xsens_mtw/MtwCallback.h"
 
@@ -51,7 +54,9 @@ void hiros::xsens_mtw::MtwCallback::onLiveDataAvailable(XsDevice* t_device, cons
 {
   XsMutexLocker lock(m_mutex);
   m_packet_buffer.push_back(*t_packet);
-  if (m_packet_buffer.size() > 300) {
+  if (m_packet_buffer.size() > m_max_buffer_size) {
+    std::cout << "MtwCallback... Warning: buffer size > " << m_max_buffer_size << ". Deleting oldest packet"
+              << std::endl;
     deleteOldestPacket();
     if (m_read_packets < 0) {
       m_read_packets = 0;
