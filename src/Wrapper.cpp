@@ -450,22 +450,23 @@ bool hiros::xsens_mtw::Wrapper::getClosestUpdateRate()
   }
 
   if (m_supported_update_rates.size() == 1) {
-    return m_supported_update_rates.at(0);
+    m_update_rate = m_supported_update_rates.at(0);
   }
+  else {
+    int u_rate_dist = -1;
+    int closest_update_rate = -1;
 
-  int u_rate_dist = -1;
-  int closest_update_rate = -1;
+    for (auto& up_rate : m_supported_update_rates) {
+      const int curr_dist = std::abs(up_rate - m_mtw_params.desired_update_rate);
 
-  for (auto& up_rate : m_supported_update_rates) {
-    const int curr_dist = std::abs(up_rate - m_mtw_params.desired_update_rate);
-
-    if ((u_rate_dist == -1) || (curr_dist < u_rate_dist)) {
-      u_rate_dist = curr_dist;
-      closest_update_rate = up_rate;
+      if ((u_rate_dist == -1) || (curr_dist < u_rate_dist)) {
+        u_rate_dist = curr_dist;
+        closest_update_rate = up_rate;
+      }
     }
-  }
 
-  m_update_rate = closest_update_rate;
+    m_update_rate = closest_update_rate;
+  }
 
   return true;
 }
