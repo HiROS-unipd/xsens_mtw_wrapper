@@ -53,3 +53,27 @@ To reset the orientation of all IMUs:
 rosservice call /xsens_mtw/reset_orientation "sensors: []"
 ```
 
+## Using this driver
+
+
+
+When using this driver, please cite the following paper:
+
+```latex
+A ROS Driver for Xsens Wireless Inertial Measurement Unit Systems.
+M. Guidolin, E. Menegatti, M. Reggiani, L. Tagliapietra
+In proceedings of 2021 IEEE International Conference on Industrial Technology (ICIT), 2021, in press.
+```
+
+Bib citation Source:
+
+```bibtex
+@inproceedings{guidolin2021ros,
+  title={A {ROS} Driver for Xsens Wireless Inertial Measurement Unit Systems},
+  author={Guidolin, Mattia and Menegatti, Emanuele and Reggiani, Monica and Tagliapietra, Luca},
+  booktitle={2021 IEEE International Conference on Industrial Technology (ICIT)},
+  year={2021, in press},
+  organization={IEEE}
+}
+```
+
