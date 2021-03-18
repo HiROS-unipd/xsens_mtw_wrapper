@@ -135,6 +135,8 @@ void hiros::xsens_mtw::Wrapper::configureWrapper()
 
   m_nh.getParam("desired_update_rate", m_mtw_params.desired_update_rate);
   m_nh.getParam("desired_radio_channel", m_mtw_params.desired_radio_channel);
+  m_nh.getParam("fixed_latency", m_mtw_params.fixed_latency);
+  m_mtw_params.fixed_latency = std::max(0., m_mtw_params.fixed_latency);
 
   m_nh.getParam("reset_initial_orientation", m_mtw_params.reset_initial_orientation);
 
@@ -618,7 +620,8 @@ void hiros::xsens_mtw::Wrapper::syncInitialPackets()
                                initial_timestamps.end(),
                                [](std::map<XsDeviceId, double>::const_reference t1,
                                   std::map<XsDeviceId, double>::const_reference t2) { return t1.second < t2.second; })
-                ->second);
+                ->second
+              - m_mtw_params.fixed_latency);
 }
 
 bool hiros::xsens_mtw::Wrapper::resetInitialOrientation() const

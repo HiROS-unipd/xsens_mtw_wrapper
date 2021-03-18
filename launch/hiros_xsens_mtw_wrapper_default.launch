@@ -7,6 +7,7 @@
 
   <arg name="desired_update_rate"       default="100"                 />
   <arg name="desired_radio_channel"     default="19"                  />
+  <arg name="fixed_latency"             default="0.030"               />
 
   <arg name="reset_initial_orientation" default="false"               />
   <arg name="enable_custom_labeling"    default="false"               />
@@ -30,6 +31,7 @@
 
     <param name="desired_update_rate"       type="int"    value="$(arg desired_update_rate)"       />
     <param name="desired_radio_channel"     type="int"    value="$(arg desired_radio_channel)"     />
+    <param name="fixed_latency"             type="double" value="$(arg fixed_latency)"             />
 
     <param name="reset_initial_orientation" type="bool"   value="$(arg reset_initial_orientation)" />
     <param name="enable_custom_labeling"    type="bool"   value="$(arg enable_custom_labeling)"    />

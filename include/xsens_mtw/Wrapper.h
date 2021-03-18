@@ -37,6 +37,7 @@ namespace hiros {
     {
       int desired_update_rate;
       int desired_radio_channel;
+      double fixed_latency;
 
       bool reset_initial_orientation;
     };
