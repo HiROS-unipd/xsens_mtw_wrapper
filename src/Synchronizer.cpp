@@ -88,7 +88,7 @@ void hiros::xsens_mtw::Synchronizer::fillMissingPackets(const XsDeviceId& t_devi
   }
 }
 
-void hiros::xsens_mtw::Synchronizer::sync(const std::shared_ptr<XsDataPacket>& t_packet)
+void hiros::xsens_mtw::Synchronizer::sync(std::shared_ptr<XsDataPacket> t_packet)
 {
   checkNewFullFrame(t_packet);
 
@@ -111,7 +111,7 @@ void hiros::xsens_mtw::Synchronizer::sync(const std::shared_ptr<XsDataPacket>& t
   }
 }
 
-void hiros::xsens_mtw::Synchronizer::checkNewFullFrame(const std::shared_ptr<XsDataPacket>& t_packet)
+void hiros::xsens_mtw::Synchronizer::checkNewFullFrame(std::shared_ptr<XsDataPacket> t_packet)
 {
   if (!m_initialized) {
     for (auto& pair : m_buffer) {

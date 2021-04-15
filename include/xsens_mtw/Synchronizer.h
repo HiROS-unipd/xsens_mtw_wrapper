@@ -37,9 +37,9 @@ namespace hiros {
 
     private:
       void fillMissingPackets(const XsDeviceId& t_device_id);
-      void sync(const std::shared_ptr<XsDataPacket>& t_packet);
+      void sync(std::shared_ptr<XsDataPacket> t_packet);
 
-      void checkNewFullFrame(const std::shared_ptr<XsDataPacket>& t_packet);
+      void checkNewFullFrame(std::shared_ptr<XsDataPacket> t_packet);
       void restructureBuffer();
       void fillFrame();
 

@@ -102,19 +102,19 @@ namespace hiros {
       XsDeviceId getDeviceId(const std::string t_label) const;
       std::string composeTopicPrefix(const XsDeviceId& t_id) const;
 
-      void publishPacket(const std::shared_ptr<XsDataPacket>& t_packet);
+      void publishPacket(std::shared_ptr<XsDataPacket> t_packet);
       void publishFrame(const std::vector<std::shared_ptr<XsDataPacket>>& t_frame);
 
-      std_msgs::Header getHeader(const std::shared_ptr<XsDataPacket>& t_packet) const;
-      sensor_msgs::Imu getImuMsg(const std::shared_ptr<XsDataPacket>& t_packet) const;
-      sensor_msgs::MagneticField getMagMsg(const std::shared_ptr<XsDataPacket>& t_packet) const;
-      hiros_xsens_mtw_wrapper::Euler getEulerMsg(const std::shared_ptr<XsDataPacket>& t_packet) const;
-      geometry_msgs::Vector3Stamped getFreeAccelerationMsg(const std::shared_ptr<XsDataPacket>& t_packet) const;
-      sensor_msgs::FluidPressure getPressureMsg(const std::shared_ptr<XsDataPacket>& t_packet) const;
-      hiros_xsens_mtw_wrapper::MIMU getMIMUMsg(const std::shared_ptr<XsDataPacket>& t_packet) const;
+      std_msgs::Header getHeader(std::shared_ptr<XsDataPacket> t_packet) const;
+      sensor_msgs::Imu getImuMsg(std::shared_ptr<XsDataPacket> t_packet) const;
+      sensor_msgs::MagneticField getMagMsg(std::shared_ptr<XsDataPacket> t_packet) const;
+      hiros_xsens_mtw_wrapper::Euler getEulerMsg(std::shared_ptr<XsDataPacket> t_packet) const;
+      geometry_msgs::Vector3Stamped getFreeAccelerationMsg(std::shared_ptr<XsDataPacket> t_packet) const;
+      sensor_msgs::FluidPressure getPressureMsg(std::shared_ptr<XsDataPacket> t_packet) const;
+      hiros_xsens_mtw_wrapper::MIMU getMIMUMsg(std::shared_ptr<XsDataPacket> t_packet) const;
       hiros_xsens_mtw_wrapper::MIMUArray
       getMIMUArrayMsg(const std::vector<std::shared_ptr<XsDataPacket>>& t_frame) const;
-      geometry_msgs::TransformStamped getTf(const std::shared_ptr<XsDataPacket>& t_packet) const;
+      geometry_msgs::TransformStamped getTf(std::shared_ptr<XsDataPacket> t_packet) const;
 
       bool resetOrientation(hiros_xsens_mtw_wrapper::ResetOrientation::Request& t_req,
                             hiros_xsens_mtw_wrapper::ResetOrientation::Response& t_res);

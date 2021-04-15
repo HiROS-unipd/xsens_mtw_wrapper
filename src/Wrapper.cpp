@@ -658,7 +658,7 @@ std::string hiros::xsens_mtw::Wrapper::composeTopicPrefix(const XsDeviceId& t_id
   return "/" + m_node_namespace + "/" + getDeviceLabel(t_id);
 }
 
-void hiros::xsens_mtw::Wrapper::publishPacket(const std::shared_ptr<XsDataPacket>& t_packet)
+void hiros::xsens_mtw::Wrapper::publishPacket(std::shared_ptr<XsDataPacket> t_packet)
 {
   if (m_wrapper_params.publish_imu && t_packet->containsOrientation() && t_packet->containsCalibratedGyroscopeData()
       && t_packet->containsCalibratedAcceleration()) {
@@ -708,7 +708,7 @@ void hiros::xsens_mtw::Wrapper::publishFrame(const std::vector<std::shared_ptr<X
   ros::spinOnce();
 }
 
-std_msgs::Header hiros::xsens_mtw::Wrapper::getHeader(const std::shared_ptr<XsDataPacket>& t_packet) const
+std_msgs::Header hiros::xsens_mtw::Wrapper::getHeader(std::shared_ptr<XsDataPacket> t_packet) const
 {
   std_msgs::Header header;
 
@@ -720,7 +720,7 @@ std_msgs::Header hiros::xsens_mtw::Wrapper::getHeader(const std::shared_ptr<XsDa
   return header;
 }
 
-sensor_msgs::Imu hiros::xsens_mtw::Wrapper::getImuMsg(const std::shared_ptr<XsDataPacket>& t_packet) const
+sensor_msgs::Imu hiros::xsens_mtw::Wrapper::getImuMsg(std::shared_ptr<XsDataPacket> t_packet) const
 {
   sensor_msgs::Imu out_msg;
   out_msg.header = getHeader(t_packet);
@@ -744,7 +744,7 @@ sensor_msgs::Imu hiros::xsens_mtw::Wrapper::getImuMsg(const std::shared_ptr<XsDa
   return out_msg;
 }
 
-sensor_msgs::MagneticField hiros::xsens_mtw::Wrapper::getMagMsg(const std::shared_ptr<XsDataPacket>& t_packet) const
+sensor_msgs::MagneticField hiros::xsens_mtw::Wrapper::getMagMsg(std::shared_ptr<XsDataPacket> t_packet) const
 {
   sensor_msgs::MagneticField out_msg;
   out_msg.header = getHeader(t_packet);
@@ -757,8 +757,7 @@ sensor_msgs::MagneticField hiros::xsens_mtw::Wrapper::getMagMsg(const std::share
   return out_msg;
 }
 
-hiros_xsens_mtw_wrapper::Euler
-hiros::xsens_mtw::Wrapper::getEulerMsg(const std::shared_ptr<XsDataPacket>& t_packet) const
+hiros_xsens_mtw_wrapper::Euler hiros::xsens_mtw::Wrapper::getEulerMsg(std::shared_ptr<XsDataPacket> t_packet) const
 {
   hiros_xsens_mtw_wrapper::Euler out_msg;
   out_msg.header = getHeader(t_packet);
@@ -774,7 +773,7 @@ hiros::xsens_mtw::Wrapper::getEulerMsg(const std::shared_ptr<XsDataPacket>& t_pa
 }
 
 geometry_msgs::Vector3Stamped
-hiros::xsens_mtw::Wrapper::getFreeAccelerationMsg(const std::shared_ptr<XsDataPacket>& t_packet) const
+hiros::xsens_mtw::Wrapper::getFreeAccelerationMsg(std::shared_ptr<XsDataPacket> t_packet) const
 {
   geometry_msgs::Vector3Stamped out_msg;
   out_msg.header = getHeader(t_packet);
@@ -786,8 +785,7 @@ hiros::xsens_mtw::Wrapper::getFreeAccelerationMsg(const std::shared_ptr<XsDataPa
   return out_msg;
 }
 
-sensor_msgs::FluidPressure
-hiros::xsens_mtw::Wrapper::getPressureMsg(const std::shared_ptr<XsDataPacket>& t_packet) const
+sensor_msgs::FluidPressure hiros::xsens_mtw::Wrapper::getPressureMsg(std::shared_ptr<XsDataPacket> t_packet) const
 {
   sensor_msgs::FluidPressure out_msg;
   out_msg.header = getHeader(t_packet);
@@ -798,7 +796,7 @@ hiros::xsens_mtw::Wrapper::getPressureMsg(const std::shared_ptr<XsDataPacket>& t
   return out_msg;
 }
 
-hiros_xsens_mtw_wrapper::MIMU hiros::xsens_mtw::Wrapper::getMIMUMsg(const std::shared_ptr<XsDataPacket>& t_packet) const
+hiros_xsens_mtw_wrapper::MIMU hiros::xsens_mtw::Wrapper::getMIMUMsg(std::shared_ptr<XsDataPacket> t_packet) const
 {
   hiros_xsens_mtw_wrapper::MIMU out_msg;
 
@@ -838,7 +836,7 @@ hiros::xsens_mtw::Wrapper::getMIMUArrayMsg(const std::vector<std::shared_ptr<XsD
   return out_msg;
 }
 
-geometry_msgs::TransformStamped hiros::xsens_mtw::Wrapper::getTf(const std::shared_ptr<XsDataPacket>& t_packet) const
+geometry_msgs::TransformStamped hiros::xsens_mtw::Wrapper::getTf(std::shared_ptr<XsDataPacket> t_packet) const
 {
   geometry_msgs::TransformStamped tf;
   tf.header = getHeader(t_packet);
