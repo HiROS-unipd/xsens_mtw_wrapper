@@ -32,16 +32,15 @@ std::shared_ptr<XsDataPacket> hiros::xsens_mtw::MtwCallback::getLatestPacket()
 
 void hiros::xsens_mtw::MtwCallback::deleteOldestPacket()
 {
-  XsMutexLocker lock(m_mutex);
-  m_packet_buffer.pop_front();
-  --m_read_packets;
+  return deleteOldestPackets(1);
 }
 
 void hiros::xsens_mtw::MtwCallback::deleteOldestPackets(const unsigned long& t_n_packets)
 {
   XsMutexLocker lock(m_mutex);
-  m_packet_buffer.erase(m_packet_buffer.begin(), m_packet_buffer.begin() + static_cast<long>(t_n_packets));
-  m_read_packets -= t_n_packets;
+  auto n_packets_to_delete = static_cast<long>(std::min(t_n_packets, m_packet_buffer.size()));
+  m_packet_buffer.erase(m_packet_buffer.begin(), m_packet_buffer.begin() + n_packets_to_delete);
+  m_read_packets = std::max(0, static_cast<int>(m_read_packets - n_packets_to_delete));
 }
 
 XsDevice const& hiros::xsens_mtw::MtwCallback::device() const
@@ -58,8 +57,5 @@ void hiros::xsens_mtw::MtwCallback::onLiveDataAvailable(XsDevice* t_device, cons
     std::cout << "MtwCallback... Warning: buffer size > " << m_max_buffer_size << ". Deleting oldest packet"
               << std::endl;
     deleteOldestPacket();
-    if (m_read_packets < 0) {
-      m_read_packets = 0;
-    }
   }
 }
