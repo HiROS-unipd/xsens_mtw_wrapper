@@ -1,5 +1,6 @@
 // Internal dependencies
 #include "xsens_mtw/Synchronizer.h"
+#include "xsens_mtw/utils.h"
 
 hiros::xsens_mtw::Synchronizer::Synchronizer(const std::map<XsDeviceId, MtwCallback*>& t_mtw_callbacks,
                                              const SyncPolicy& t_sync_policy)
@@ -82,9 +83,17 @@ void hiros::xsens_mtw::Synchronizer::fillMissingPackets(const XsDeviceId& t_devi
       static_cast<unsigned long>(m_buffer.at(t_device_id).rbegin()->get()->packetId()
                                  - std::next(m_buffer.at(t_device_id).rbegin())->get()->packetId() - 1);
 
-    m_buffer.at(t_device_id)
-      .insert(
-        std::prev(m_buffer.at(t_device_id).end()), n_packets_to_add, *std::next(m_buffer.at(t_device_id).rbegin()));
+    if (n_packets_to_add > 0) {
+      std::vector<std::shared_ptr<XsDataPacket>> interpolated_packets(n_packets_to_add);
+      for (unsigned int i = 0; i < interpolated_packets.size(); ++i) {
+        interpolated_packets.at(i) = utils::interpolate(*std::next(m_buffer.at(t_device_id).rbegin()),
+                                                        m_buffer.at(t_device_id).back(),
+                                                        (i + 1) / static_cast<double>(n_packets_to_add + 1));
+      }
+
+      m_buffer.at(t_device_id)
+        .insert(std::prev(m_buffer.at(t_device_id).end()), interpolated_packets.begin(), interpolated_packets.end());
+    }
   }
 }
 
