@@ -19,7 +19,7 @@ namespace hiros {
       std::string toString(const XsPortInfo& t_p);
       std::string toString(const XsDevice& t_d);
 
-      XsDeviceId toXsDeviceId(const std::string t_string);
+      XsDeviceId toXsDeviceId(const std::string& t_string);
 
     } // namespace utils
   } // namespace xsens_mtw

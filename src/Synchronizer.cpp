@@ -138,7 +138,11 @@ void hiros::xsens_mtw::Synchronizer::checkNewFullFrame(std::shared_ptr<XsDataPac
 
 void hiros::xsens_mtw::Synchronizer::restructureBuffer()
 {
-  for (unsigned long row = 0; row < (m_buffer.begin()->second.size() - 1); ++row) {
+  auto n_rows = std::min_element(m_buffer.begin(), m_buffer.end(), [](const auto& lhs, const auto& rhs) {
+                  return lhs.second.size() < rhs.second.size();
+                })->second.size();
+
+  for (unsigned long row = 0; row < n_rows - 1; ++row) {
     if (isDoubleRow(row)) {
       eraseRow(row--);
     }
@@ -168,39 +172,33 @@ void hiros::xsens_mtw::Synchronizer::fillFrame()
 
 bool hiros::xsens_mtw::Synchronizer::isFullFrame(const long& t_packet_id)
 {
-  bool is_full_row = true;
   for (auto& pair : m_buffer) {
     if (!containsPacket(pair.first, t_packet_id)) {
-      is_full_row = false;
-      break;
+      return false;
     }
   }
-  return is_full_row;
+  return true;
 }
 
 bool hiros::xsens_mtw::Synchronizer::containsPacket(const XsDeviceId& t_device_id, const long& t_packet_id)
 {
-  bool contains_packet = false;
   for (auto it = m_buffer.at(t_device_id).rbegin(); it < m_buffer.at(t_device_id).rend(); ++it) {
     if (it->get()->packetId() == t_packet_id) {
-      contains_packet = true;
-      break;
+      return true;
     }
   }
 
-  return contains_packet;
+  return false;
 }
 
 bool hiros::xsens_mtw::Synchronizer::isDoubleRow(const unsigned long& t_row)
 {
-  bool is_double_row = true;
   for (auto& pair : m_buffer) {
-    if (pair.second.at(t_row + 1)->packetId() > pair.second.at(t_row)->packetId()) {
-      is_double_row = false;
-      break;
+    if (pair.second.size() <= t_row + 1 || pair.second.at(t_row + 1)->packetId() > pair.second.at(t_row)->packetId()) {
+      return false;
     }
   }
-  return is_double_row;
+  return true;
 }
 
 void hiros::xsens_mtw::Synchronizer::eraseRow(const unsigned long& t_row)

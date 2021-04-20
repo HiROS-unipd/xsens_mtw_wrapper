@@ -3,7 +3,6 @@
 
 // Standard dependencies
 #include <csignal>
-#include <deque>
 
 // ROS dependencies
 #include "geometry_msgs/Vector3Stamped.h"
