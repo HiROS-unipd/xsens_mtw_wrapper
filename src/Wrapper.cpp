@@ -26,6 +26,7 @@ void hiros::xsens_mtw::Wrapper::start()
     if (!m_xsens_mtw_configured) {
       if (!configure()) {
         ros::shutdown();
+        exit(EXIT_FAILURE);
       }
     }
     else {
@@ -38,6 +39,7 @@ void hiros::xsens_mtw::Wrapper::start()
       if (up_rate_index == m_supported_update_rates.size() - 1) {
         ROS_FATAL_STREAM("Xsens Mtw Wrapper... Failed to go to measurement mode");
         ros::shutdown();
+        exit(EXIT_FAILURE);
       }
 
       m_mtw_params.desired_update_rate = m_supported_update_rates.at(++up_rate_index);
@@ -47,10 +49,12 @@ void hiros::xsens_mtw::Wrapper::start()
 
     if (!waitMtwConnection()) {
       ros::shutdown();
+      exit(EXIT_FAILURE);
     }
 
     if (!getMtwsDeviceIstances()) {
       ros::shutdown();
+      exit(EXIT_FAILURE);
     }
 
     attachCallbackHandlers();
@@ -127,6 +131,7 @@ void hiros::xsens_mtw::Wrapper::stop()
   ROS_INFO_STREAM(BASH_MSG_GREEN << "Xsens Mtw Wrapper... STOPPED" << BASH_MSG_RESET);
 
   ros::shutdown();
+  exit(EXIT_FAILURE);
 }
 
 void hiros::xsens_mtw::Wrapper::configureWrapper()
@@ -161,6 +166,7 @@ void hiros::xsens_mtw::Wrapper::configureWrapper()
   if (m_wrapper_params.publish_mimu_array && !m_wrapper_params.synchronize) {
     ROS_FATAL_STREAM("Xsens Mtw Wrapper... Cannot publish MIMU array messages when Synchronizer is off. Closing");
     ros::shutdown();
+    exit(EXIT_FAILURE);
   }
 
   m_nh.getParam("publish_imu", m_wrapper_params.publish_imu);
@@ -177,6 +183,7 @@ void hiros::xsens_mtw::Wrapper::configureWrapper()
   if (nothing_to_publish && !m_wrapper_params.publish_tf) {
     ROS_FATAL_STREAM("Xsens Mtw Wrapper... Nothing to publish. Closing");
     ros::shutdown();
+    exit(EXIT_FAILURE);
   }
 
   if (m_wrapper_params.enable_custom_labeling) {
@@ -216,10 +223,12 @@ void hiros::xsens_mtw::Wrapper::stopXsensMtw()
 {
   if (!setConfigMode()) {
     ros::shutdown();
+    exit(EXIT_FAILURE);
   }
 
   if (!disableRadio()) {
     ros::shutdown();
+    exit(EXIT_FAILURE);
   }
 
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Closing XsControl");
