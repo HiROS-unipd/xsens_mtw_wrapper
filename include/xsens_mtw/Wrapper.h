@@ -43,6 +43,7 @@ namespace hiros {
 
     struct WrapperParameters
     {
+      int number_of_mtws;
       std::string tf_prefix;
       bool enable_custom_labeling;
 

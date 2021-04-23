@@ -5,6 +5,7 @@
     <arg name="xsens_mtw_node_required"   value="true"                />
     <arg name="node_name"                 value="xsens_node_01"       />
 
+    <arg name="number_of_mtws"            value="6"                   />
     <arg name="desired_update_rate"       value="120"                 />
 
     <arg name="enable_custom_labeling"    value="true"                />

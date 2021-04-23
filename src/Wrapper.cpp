@@ -142,9 +142,9 @@ void hiros::xsens_mtw::Wrapper::configureWrapper()
   m_nh.getParam("desired_radio_channel", m_mtw_params.desired_radio_channel);
   m_nh.getParam("fixed_latency", m_mtw_params.fixed_latency);
   m_mtw_params.fixed_latency = std::max(0., m_mtw_params.fixed_latency);
-
   m_nh.getParam("reset_initial_orientation", m_mtw_params.reset_initial_orientation);
 
+  m_nh.getParam("number_of_mtws", m_wrapper_params.number_of_mtws);
   m_nh.getParam("tf_prefix", m_wrapper_params.tf_prefix);
   m_nh.getParam("enable_custom_labeling", m_wrapper_params.enable_custom_labeling);
 
@@ -306,9 +306,17 @@ bool hiros::xsens_mtw::Wrapper::waitMtwConnection()
 {
   ROS_INFO_STREAM("Xsens Mtw Wrapper... Waiting for MTW to wirelessly connect");
 
-  XsTime::msleep(m_connection_timeout);
+  if (m_wrapper_params.number_of_mtws <= 0) {
+    XsTime::msleep(m_connection_timeout);
+    m_number_of_connected_mtws = m_wireless_master_callback.getWirelessMTWs().size();
+  }
+  else {
+    while (m_number_of_connected_mtws < static_cast<unsigned int>(m_wrapper_params.number_of_mtws)) {
+      XsTime::msleep(500);
+      m_number_of_connected_mtws = m_wireless_master_callback.getWirelessMTWs().size();
+    }
+  }
 
-  m_number_of_connected_mtws = m_wireless_master_callback.getWirelessMTWs().size();
   ROS_INFO_STREAM("Xsens Mtw Wrapper... Number of connected MTWs: " << m_number_of_connected_mtws);
 
   if (m_number_of_connected_mtws == 0) {
