@@ -147,6 +147,7 @@ void hiros::xsens_mtw::Wrapper::configureWrapper()
   m_nh.getParam("number_of_mtws", m_wrapper_params.number_of_mtws);
   m_nh.getParam("tf_prefix", m_wrapper_params.tf_prefix);
   m_nh.getParam("enable_custom_labeling", m_wrapper_params.enable_custom_labeling);
+  m_nh.getParam("enable_external_sync", m_wrapper_params.enable_external_sync);
 
   m_nh.getParam("synchronize", m_wrapper_params.synchronize);
   m_nh.getParam("sync_policy", m_wrapper_params.sync_policy_name);
@@ -196,6 +197,27 @@ void hiros::xsens_mtw::Wrapper::configureWrapper()
       }
     }
   }
+
+  if (m_wrapper_params.enable_external_sync) {
+    XmlRpc::XmlRpcValue xml_sync_settings;
+    if (m_nh.getParam("sync_settings", xml_sync_settings)) {
+      m_mtw_params.sync_settings.reserve(static_cast<unsigned long>(xml_sync_settings.size()));
+
+      for (int i = 0; i < xml_sync_settings.size(); ++i) {
+        XsSyncSetting sync_setting;
+
+        sync_setting.m_line = getSetting(xml_sync_settings[i]["line"], sync_line_map);
+        sync_setting.m_function = getSetting(xml_sync_settings[i]["function"], sync_function_map);
+        sync_setting.m_polarity = getSetting(xml_sync_settings[i]["polarity"], sync_polarity_map);
+        sync_setting.m_skipFirst = static_cast<uint16_t>(static_cast<int>(xml_sync_settings[i]["skip_first"]));
+        sync_setting.m_pulseWidth = static_cast<uint32_t>(static_cast<int>(xml_sync_settings[i]["pulse_width"]));
+        sync_setting.m_skipFactor = static_cast<uint16_t>(static_cast<int>(xml_sync_settings[i]["skip_factor"]));
+        sync_setting.m_triggerOnce = static_cast<uint8_t>(static_cast<int>(xml_sync_settings[i]["trigger_once"]));
+
+        m_mtw_params.sync_settings.push_back(sync_setting);
+      }
+    }
+  }
 }
 
 bool hiros::xsens_mtw::Wrapper::configureXsensMtw()
@@ -206,6 +228,7 @@ bool hiros::xsens_mtw::Wrapper::configureXsensMtw()
   success = success && findWirelessMaster();
   success = success && openPort();
   success = success && getXsdeviceInstance();
+  success = success && setSyncSettings();
   success = success && setConfigMode();
   attachCallbackHandler();
   success = success && getClosestUpdateRate();
@@ -429,6 +452,18 @@ bool hiros::xsens_mtw::Wrapper::getXsdeviceInstance()
   }
 
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... XsDevice instance created @ " << utils::toString(*m_wireless_master_device));
+  return true;
+}
+
+bool hiros::xsens_mtw::Wrapper::setSyncSettings()
+{
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Setting sync settings for wireless master");
+
+  if (!m_wireless_master_device->setSyncSettings(m_mtw_params.sync_settings)) {
+    ROS_FATAL_STREAM("Xsens Mtw Wrapper... Failed to set sync settings");
+    return false;
+  }
+
   return true;
 }
 

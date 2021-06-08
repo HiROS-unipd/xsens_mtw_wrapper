@@ -32,11 +32,41 @@ namespace hiros {
       {"fill_partial_frames", Synchronizer::SyncPolicy::fillPartialFrames},
       {"skip_partial_frames", Synchronizer::SyncPolicy::skipPartialFrames}};
 
+    static const std::map<std::string, XsSyncLine> sync_line_map = {{"XSL_In1", XSL_In1},
+                                                                    {"XSL_In2", XSL_In2},
+                                                                    {"XSL_Out1", XSL_Out1},
+                                                                    {"XSL_Out2", XSL_Out2}};
+
+    static const std::map<XsSyncLine, std::string> sync_line_to_str_map = {{XSL_In1, "XSL_In1"},
+                                                                           {XSL_In2, "XSL_In2"},
+                                                                           {XSL_Out1, "XSL_Out1"},
+                                                                           {XSL_Out2, "XSL_Out2"}};
+
+    static const std::map<std::string, XsSyncFunction> sync_function_map = {
+      {"XSF_StartRecording", XSF_StartRecording},
+      {"XSF_StopRecording", XSF_StopRecording},
+      {"XSF_ResetTimer", XSF_ResetTimer},
+      {"XSF_TriggerIndication", XSF_TriggerIndication},
+      {"XSF_IntervalTransitionMeasurement", XSF_IntervalTransitionMeasurement},
+      {"XSF_IntervalTransitionRecording", XSF_IntervalTransitionRecording},
+      {"XSF_GotoOperational", XSF_GotoOperational},
+      {"XSF_Invalid", XSF_Invalid},
+      {"XSF_Count", XSF_Count}};
+
+    static const std::map<std::string, XsSyncPolarity> sync_polarity_map = {{"XSP_None", XSP_None},
+                                                                            {"XSP_RisingEdge", XSP_RisingEdge},
+                                                                            {"XSP_PositivePulse", XSP_PositivePulse},
+                                                                            {"XSP_FallingEdge", XSP_FallingEdge},
+                                                                            {"XSP_NegativePulse", XSP_NegativePulse},
+                                                                            {"XSP_Both", XSP_Both}};
+
     struct XsensMtwParameters
     {
       int desired_update_rate;
       int desired_radio_channel;
       double fixed_latency;
+
+      XsSyncSettingArray sync_settings;
 
       bool reset_initial_orientation;
     };
@@ -46,6 +76,7 @@ namespace hiros {
       int number_of_mtws;
       std::string tf_prefix;
       bool enable_custom_labeling;
+      bool enable_external_sync;
 
       bool synchronize;
       std::string sync_policy_name;
@@ -87,12 +118,29 @@ namespace hiros {
       bool findWirelessMaster();
       bool openPort();
       bool getXsdeviceInstance();
+      bool setSyncSettings();
       bool setConfigMode();
       void attachCallbackHandler();
       bool getClosestUpdateRate();
       bool setUpdateRate();
       bool setRadioChannel();
       bool disableRadio();
+
+      template <class T>
+      T getSetting(const std::string& t_setting_name, const std::map<std::string, T>& t_setting_map) const
+      {
+        if (t_setting_map.count(t_setting_name) == 0) {
+          ROS_FATAL_STREAM("Xsens Mtw Wrapper... Unsupported setting '" << t_setting_name << "'.");
+          ROS_FATAL_STREAM("Xsens Mtw Wrapper... Supported settings are:");
+          for (const auto& pair : t_setting_map) {
+            ROS_FATAL_STREAM("Xsens Mtw Wrapper...     - " << pair.first);
+          }
+          ROS_FATAL_STREAM("Xsens Mtw Wrapper... Closing");
+          ros::shutdown();
+          exit(EXIT_FAILURE);
+        }
+        return t_setting_map.at(t_setting_name);
+      }
 
       void setupRos();
       bool resetInitialOrientation() const;

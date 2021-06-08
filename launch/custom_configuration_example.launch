@@ -9,6 +9,7 @@
     <arg name="desired_update_rate"       value="120"                 />
 
     <arg name="enable_custom_labeling"    value="true"                />
+    <arg name="enable_external_sync"      value="true"                />
 
     <arg name="synchronize"               value="true"                />
     <arg name="sync_policy"               value="fill_partial_frames" />

@@ -12,6 +12,7 @@
 
   <arg name="reset_initial_orientation" default="false"               />
   <arg name="enable_custom_labeling"    default="false"               />
+  <arg name="enable_external_sync"      default="false"               />
 
   <arg name="synchronize"               default="false"               />
   <arg name="sync_policy"               default="skip_partial_frames" />
@@ -26,6 +27,7 @@
 
   <node pkg="hiros_xsens_mtw_wrapper" type="hiros_xsens_mtw_wrapper" name="$(arg node_name)" output="screen" required="$(arg xsens_mtw_node_required)">
     <rosparam if="$(arg enable_custom_labeling)" command="load" file="$(find hiros_xsens_mtw_wrapper)/config/sensor_labels.yaml" />
+    <rosparam if="$(arg enable_external_sync)" command="load" file="$(find hiros_xsens_mtw_wrapper)/config/sync_settings.yaml" />
 
     <param name="node_name"                 type="str"    value="$(arg node_name)"                 />
     <param name="tf_prefix"                 type="str"    value="$(arg tf_prefix)"                 />
@@ -37,6 +39,7 @@
 
     <param name="reset_initial_orientation" type="bool"   value="$(arg reset_initial_orientation)" />
     <param name="enable_custom_labeling"    type="bool"   value="$(arg enable_custom_labeling)"    />
+    <param name="enable_external_sync"      type="bool"   value="$(arg enable_external_sync)"      />
 
     <param name="synchronize"               type="bool"   value="$(arg synchronize)"               />
     <param name="sync_policy"               type="string" value="$(arg sync_policy)"               />

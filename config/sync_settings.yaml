@@ -1,0 +1,16 @@
+sync_settings:
+  - line: XSL_In1
+    function: XSF_StartRecording
+    polarity: XSP_RisingEdge
+    skip_first: 0
+    pulse_width: 0
+    skip_factor: 1
+    trigger_once: 0
+
+  - line: XSL_In1
+    function: XSF_StopRecording
+    polarity: XSP_RisingEdge
+    skip_first: 1
+    pulse_width: 0
+    skip_factor: 1
+    trigger_once: 0
