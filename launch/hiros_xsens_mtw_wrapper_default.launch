@@ -14,6 +14,7 @@
   <arg name="enable_custom_labeling"    default="false"               />
   <arg name="enable_external_sync"      default="false"               />
 
+  <arg name="publish_only_recording"    default="false"               />
   <arg name="synchronize"               default="false"               />
   <arg name="sync_policy"               default="skip_partial_frames" />
   <arg name="publish_mimu_array"        default="false"               />
@@ -41,6 +42,7 @@
     <param name="enable_custom_labeling"    type="bool"   value="$(arg enable_custom_labeling)"    />
     <param name="enable_external_sync"      type="bool"   value="$(arg enable_external_sync)"      />
 
+    <param name="publish_only_recording"    type="bool"   value="$(arg publish_only_recording)"    />
     <param name="synchronize"               type="bool"   value="$(arg synchronize)"               />
     <param name="sync_policy"               type="string" value="$(arg sync_policy)"               />
     <param name="publish_mimu_array"        type="bool"   value="$(arg publish_mimu_array)"        />

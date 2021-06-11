@@ -80,6 +80,7 @@ namespace hiros {
       bool enable_custom_labeling;
       bool enable_external_sync;
 
+      bool publish_only_recording;
       bool synchronize;
       std::string sync_policy_name;
       bool publish_mimu_array;

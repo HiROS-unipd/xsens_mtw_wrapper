@@ -149,6 +149,7 @@ void hiros::xsens_mtw::Wrapper::configureWrapper()
   m_nh.getParam("enable_custom_labeling", m_wrapper_params.enable_custom_labeling);
   m_nh.getParam("enable_external_sync", m_wrapper_params.enable_external_sync);
 
+  m_nh.getParam("publish_only_recording", m_wrapper_params.publish_only_recording);
   m_nh.getParam("synchronize", m_wrapper_params.synchronize);
   m_nh.getParam("sync_policy", m_wrapper_params.sync_policy_name);
   if (sync_policy_map.find(m_wrapper_params.sync_policy_name) == sync_policy_map.end()) {
@@ -716,6 +717,10 @@ std::string hiros::xsens_mtw::Wrapper::composeTopicPrefix(const XsDeviceId& t_id
 
 void hiros::xsens_mtw::Wrapper::publishPacket(std::shared_ptr<XsDataPacket> t_packet)
 {
+  if (m_wrapper_params.publish_only_recording && !m_wireless_master_device->isRecording()) {
+    return;
+  }
+
   if (m_wrapper_params.publish_imu && t_packet->containsOrientation() && t_packet->containsCalibratedGyroscopeData()
       && t_packet->containsCalibratedAcceleration()) {
     m_imu_pubs.at(t_packet->deviceId()).publish(getImuMsg(t_packet));
@@ -744,6 +749,10 @@ void hiros::xsens_mtw::Wrapper::publishPacket(std::shared_ptr<XsDataPacket> t_pa
 
 void hiros::xsens_mtw::Wrapper::publishFrame(const std::vector<std::shared_ptr<XsDataPacket>>& t_frame)
 {
+  if (m_wrapper_params.publish_only_recording && !m_wireless_master_device->isRecording()) {
+    return;
+  }
+
   if (m_wrapper_params.publish_mimu_array) {
     m_data_pub.publish(getMIMUArrayMsg(t_frame));
 
