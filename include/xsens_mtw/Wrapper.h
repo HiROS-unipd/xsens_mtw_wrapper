@@ -18,6 +18,8 @@
 #include "hiros_xsens_mtw_wrapper/MIMU.h"
 #include "hiros_xsens_mtw_wrapper/MIMUArray.h"
 #include "hiros_xsens_mtw_wrapper/ResetOrientation.h"
+#include "hiros_xsens_mtw_wrapper/StartRecording.h"
+#include "hiros_xsens_mtw_wrapper/StopRecording.h"
 #include "xsens_mtw/MtwCallback.h"
 #include "xsens_mtw/Synchronizer.h"
 #include "xsens_mtw/WirelessMasterCallback.h"
@@ -166,6 +168,10 @@ namespace hiros {
 
       bool resetOrientation(hiros_xsens_mtw_wrapper::ResetOrientation::Request& t_req,
                             hiros_xsens_mtw_wrapper::ResetOrientation::Response& t_res);
+      bool startRecording(hiros_xsens_mtw_wrapper::StartRecording::Request& t_req,
+                          hiros_xsens_mtw_wrapper::StartRecording::Response& t_res);
+      bool stopRecording(hiros_xsens_mtw_wrapper::StopRecording::Request& t_req,
+                         hiros_xsens_mtw_wrapper::StopRecording::Response& t_res);
 
       static inline void sighandler(int t_sig) { s_request_shutdown = (t_sig == SIGINT); };
 
@@ -201,6 +207,8 @@ namespace hiros {
       const unsigned int m_ros_topic_queue_size = 10;
 
       ros::ServiceServer m_reset_orientation_srv;
+      ros::ServiceServer m_start_recording_srv;
+      ros::ServiceServer m_stop_recording_srv;
       ros::Publisher m_data_pub;
       std::map<XsDeviceId, ros::Publisher> m_imu_pubs;
       std::map<XsDeviceId, ros::Publisher> m_mag_pubs;

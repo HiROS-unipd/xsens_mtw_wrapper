@@ -33,7 +33,9 @@ add_message_files(FILES Euler.msg
                         MIMUArray.msg)
 
 # Generate services in the 'srv' folder
-add_service_files(FILES ResetOrientation.srv)
+add_service_files(FILES ResetOrientation.srv
+                        StartRecording.srv
+                        StopRecording.srv)
 
 # Generate added messages and services with any dependencies listed here
 generate_messages(DEPENDENCIES

@@ -317,8 +317,10 @@ void hiros::xsens_mtw::Wrapper::stopWrapper()
     }
   }
 
-  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Shutting down ROS service server");
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Shutting down ROS service server(s)");
   m_reset_orientation_srv.shutdown();
+  m_start_recording_srv.shutdown();
+  m_stop_recording_srv.shutdown();
 
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Clearing maps");
   m_ids_to_labels.clear();
@@ -575,6 +577,8 @@ void hiros::xsens_mtw::Wrapper::setupRos()
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Setting up ROS");
 
   m_reset_orientation_srv = m_nh.advertiseService("reset_orientation", &Wrapper::resetOrientation, this);
+  m_start_recording_srv = m_nh.advertiseService("start_recording", &Wrapper::startRecording, this);
+  m_stop_recording_srv = m_nh.advertiseService("stop_recording", &Wrapper::stopRecording, this);
 
   if (m_wrapper_params.publish_mimu_array) {
     m_data_pub = m_nh.advertise<hiros_xsens_mtw_wrapper::MIMUArray>("data", m_ros_topic_queue_size);
@@ -933,4 +937,28 @@ bool hiros::xsens_mtw::Wrapper::resetOrientation(hiros_xsens_mtw_wrapper::ResetO
   }
 
   return success;
+}
+
+bool hiros::xsens_mtw::Wrapper::startRecording(hiros_xsens_mtw_wrapper::StartRecording::Request& t_req,
+                                               hiros_xsens_mtw_wrapper::StartRecording::Response& t_res)
+{
+  if (!m_wireless_master_device->startRecording()) {
+    ROS_WARN_STREAM("Xsens Mtw Wrapper... Failed to start recording");
+    return false;
+  }
+
+  ROS_INFO_STREAM(BASH_MSG_GREEN << "Xsens Mtw Wrapper... Start recording @ " << ros::Time::now());
+  return true;
+}
+
+bool hiros::xsens_mtw::Wrapper::stopRecording(hiros_xsens_mtw_wrapper::StopRecording::Request& t_req,
+                                              hiros_xsens_mtw_wrapper::StopRecording::Response& t_res)
+{
+  if (!m_wireless_master_device->stopRecording()) {
+    ROS_WARN_STREAM("Xsens Mtw Wrapper... Failed to stop recording");
+    return false;
+  }
+
+  ROS_INFO_STREAM(BASH_MSG_GREEN "Xsens Mtw Wrapper... Stop  recording @ " << ros::Time::now());
+  return true;
 }
