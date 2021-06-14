@@ -114,6 +114,7 @@ void hiros::xsens_mtw::Wrapper::run()
         }
       }
     }
+    ros::spinOnce();
   }
 
   stop();
@@ -786,8 +787,6 @@ void hiros::xsens_mtw::Wrapper::publishFrame(const std::vector<std::shared_ptr<X
       publishPacket(packet);
     }
   }
-
-  ros::spinOnce();
 }
 
 std_msgs::Header hiros::xsens_mtw::Wrapper::getHeader(std::shared_ptr<XsDataPacket> t_packet) const
