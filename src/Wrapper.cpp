@@ -71,7 +71,24 @@ void hiros::xsens_mtw::Wrapper::start()
 
 void hiros::xsens_mtw::Wrapper::run()
 {
-  ROS_INFO_STREAM(BASH_MSG_GREEN << "Xsens Mtw Wrapper... RUNNING" << BASH_MSG_RESET);
+  if (m_wrapper_params.enable_external_sync
+      && std::find_if(m_mtw_params.sync_settings.begin(), m_mtw_params.sync_settings.end(), [](const XsSyncSetting& s) {
+           return (s.m_line == XSL_In1 || s.m_line == XSL_In2);
+         }) != m_mtw_params.sync_settings.end()) {
+    std::set<XsSyncLine> active_sync_lines;
+    for (const auto& sync_setting : m_mtw_params.sync_settings) {
+      active_sync_lines.emplace(sync_setting.m_line);
+    }
+    std::string active_sync_lines_str;
+    for (const auto& sync_line : active_sync_lines) {
+      active_sync_lines_str += " " + sync_line_to_str_map.at(sync_line) + ",";
+    }
+    active_sync_lines_str.pop_back();
+    ROS_WARN_STREAM("Xsens Mtw Wrapper... Waiting for external trigger on line(s)" << active_sync_lines_str);
+  }
+  else {
+    ROS_INFO_STREAM(BASH_MSG_GREEN << "Xsens Mtw Wrapper... RUNNING" << BASH_MSG_RESET);
+  }
 
   std::unique_ptr<Synchronizer> sync;
   if (m_wrapper_params.synchronize) {
