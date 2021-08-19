@@ -4,12 +4,11 @@ project(hiros_xsens_mtw_wrapper)
 # Compile as C++14
 add_compile_options(-std=c++14)
 
-find_package(cmake_modules REQUIRED)
-
 list(INSERT CMAKE_MODULE_PATH
             0
             "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(Xsens REQUIRED)
+
 # Find catkin macros and libraries if COMPONENTS list like find_package(catkin
 # REQUIRED COMPONENTS xyz) is used, also find other catkin packages
 find_package(catkin REQUIRED
@@ -64,14 +63,6 @@ catkin_package(CATKIN_DEPENDS
 # ##############################################################################
 # Build ##
 # ##############################################################################
-# Display additional files in qtcreator
-file(GLOB_RECURSE
-     FILES_LIST
-     "*.launch"
-     "*.msg"
-     "*.srv"
-     "*.xml")
-add_custom_target(additional_files_${PROJECT_NAME} SOURCES ${FILES_LIST})
 
 # Declare a C++ executable With catkin_make all packages are built within a
 # single CMake context The recommended prefix ensures that target names across
