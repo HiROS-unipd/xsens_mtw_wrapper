@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 
 <launch>
-  <arg name="xsens_mtw_node_required"   default="false"               />
+  <arg name="node_required"             default="false"               />
   <arg name="node_name"                 default="xsens_mtw"           />
   <arg name="tf_prefix"                 default=""                    />
   <arg name="number_of_mtws"            default="0"                   />
@@ -26,7 +26,7 @@
   <arg name="publish_pressure"          default="true"                />
   <arg name="publish_tf"                default="true"                />
 
-  <node pkg="hiros_xsens_mtw_wrapper" type="hiros_xsens_mtw_wrapper" name="$(arg node_name)" output="screen" required="$(arg xsens_mtw_node_required)">
+  <node pkg="hiros_xsens_mtw_wrapper" type="hiros_xsens_mtw_wrapper" name="$(arg node_name)" output="screen" required="$(arg node_required)">
     <rosparam if="$(arg enable_custom_labeling)" command="load" file="$(find hiros_xsens_mtw_wrapper)/config/sensor_labels.yaml" />
     <rosparam if="$(arg enable_external_sync)" command="load" file="$(find hiros_xsens_mtw_wrapper)/config/sync_settings.yaml" />
 

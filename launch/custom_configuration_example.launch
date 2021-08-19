@@ -2,7 +2,7 @@
 
 <launch>
   <include file="$(find hiros_xsens_mtw_wrapper)/launch/default.launch">
-    <arg name="xsens_mtw_node_required"   value="true"                />
+    <arg name="node_required"             value="true"                />
     <arg name="node_name"                 value="xsens_node_01"       />
 
     <arg name="number_of_mtws"            value="6"                   />
