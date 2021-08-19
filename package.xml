@@ -5,9 +5,9 @@
   <description>Hi-ROS mantained xsens_mtw_wrapper package</description>
   <maintainer email="mattia.guidolin@phd.unipd.it">Mattia Guidolin</maintainer>
   <maintainer email="luca.tagliapietra@unipd.it">Luca Tagliapietra</maintainer>
-  <license>TODO</license>
+  <license>Apache 2.0</license>
 
-  <url type="website">https://gitlab.com/hi-ros</url>
+  <url type="website">https://github.com/HiROS-unipd</url>
   <author email="mattia.guidolin@phd.unipd.it">Mattia Guidolin</author>
   <author email="luca.tagliapietra@unipd.it">Luca Tagliapietra</author>
 
