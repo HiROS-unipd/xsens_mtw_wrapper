@@ -599,7 +599,7 @@ void hiros::xsens_mtw::Wrapper::setupRos()
   stop_recording_srv_ = nh_.advertiseService("stop_recording", &Wrapper::stopRecording, this);
 
   if (wrapper_params_.publish_mimu_array) {
-    data_pub_ = nh_.advertise<hiros_xsens_mtw_wrapper::MIMUArray>("mimu/data", ros_topic_queue_size_);
+    data_pub_ = nh_.advertise<hiros_xsens_mtw_wrapper::MIMUArray>("mimu_array", ros_topic_queue_size_);
   }
   else {
     for (auto& device : connected_devices_) {
@@ -618,7 +618,7 @@ void hiros::xsens_mtw::Wrapper::setupRos()
       if (wrapper_params_.publish_euler) {
         euler_pubs_.emplace(device.first,
                             nh_.advertise<hiros_xsens_mtw_wrapper::Euler>(
-                              composeTopicPrefix(device.first) + "/imu/euler", ros_topic_queue_size_));
+                              composeTopicPrefix(device.first) + "/filter/euler", ros_topic_queue_size_));
       }
 
       if (wrapper_params_.publish_free_acceleration) {

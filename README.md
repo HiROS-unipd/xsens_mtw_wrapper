@@ -37,10 +37,10 @@ Contains an example on how to set some parameters of choice
 | `publish_tf`                | Set if the orientation as ROS transform should be published  |
 
 ## Published topics
-- **/mimu/data**: array of MIMU messages (where each MIMU message contains a *sensor_msgs/Imu* and a *sensor_msgs/MagneticField*)
+- **/mimu_array**: array of MIMU messages (where each MIMU message contains a *sensor_msgs/Imu* and a *sensor_msgs/MagneticField*)
 - **/imu/data**: orientation, angular velocity, linear acceleration
 - **/imu/mag**: magnetic field
-- **/imu/euler**: orientation expressed as Euler angles (roll, pitch, yaw)
+- **/filter/euler**: orientation expressed as Euler angles (roll, pitch, yaw)
 - **/filter/free_acceleration**: free acceleration
 - **/pressure**: pressure
 - **/tf**: orientation of each IMU expressed as tf
