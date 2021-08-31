@@ -4,7 +4,7 @@
 // Internal dependencies
 #include "xsens_mtw/Wrapper.h"
 
-bool hiros::xsens_mtw::Wrapper::s_request_shutdown = false;
+sig_atomic_t hiros::xsens_mtw::Wrapper::s_request_shutdown = 0;
 
 hiros::xsens_mtw::Wrapper::Wrapper()
   : number_of_connected_mtws_(0)

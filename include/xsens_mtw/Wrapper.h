@@ -217,7 +217,7 @@ namespace hiros {
       std::map<XsDeviceId, ros::Publisher> pressure_pubs_;
       tf2_ros::TransformBroadcaster tf_broadcaster_;
 
-      static bool s_request_shutdown;
+      static sig_atomic_t s_request_shutdown;
     };
 
   } // namespace xsens_mtw
