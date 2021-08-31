@@ -7,10 +7,10 @@
 bool hiros::xsens_mtw::Wrapper::s_request_shutdown = false;
 
 hiros::xsens_mtw::Wrapper::Wrapper()
-  : m_number_of_connected_mtws(0)
-  , m_xsens_mtw_configured(false)
-  , m_nh("~")
-  , m_node_namespace(m_nh.getNamespace())
+  : number_of_connected_mtws_(0)
+  , xsens_mtw_configured_(false)
+  , nh_("~")
+  , node_namespace_(nh_.getNamespace())
 {
   struct sigaction sig_act;
   memset(&sig_act, 0, sizeof(sig_act));
@@ -23,7 +23,7 @@ void hiros::xsens_mtw::Wrapper::start()
   ROS_INFO_STREAM("Xsens Mtw Wrapper... Starting");
 
   do {
-    if (!m_xsens_mtw_configured) {
+    if (!xsens_mtw_configured_) {
       if (!configure()) {
         ros::shutdown();
         exit(EXIT_FAILURE);
@@ -34,15 +34,15 @@ void hiros::xsens_mtw::Wrapper::start()
 
       stopXsensMtw();
 
-      unsigned long up_rate_index = static_cast<unsigned long>(m_supported_update_rates.find(m_update_rate));
+      unsigned long up_rate_index = static_cast<unsigned long>(supported_update_rates_.find(update_rate_));
 
-      if (up_rate_index == m_supported_update_rates.size() - 1) {
+      if (up_rate_index == supported_update_rates_.size() - 1) {
         ROS_FATAL_STREAM("Xsens Mtw Wrapper... Failed to go to measurement mode");
         ros::shutdown();
         exit(EXIT_FAILURE);
       }
 
-      m_mtw_params.desired_update_rate = m_supported_update_rates.at(++up_rate_index);
+      mtw_params_.desired_update_rate = supported_update_rates_.at(++up_rate_index);
 
       configureXsensMtw();
     }
@@ -62,7 +62,7 @@ void hiros::xsens_mtw::Wrapper::start()
 
   setupRos();
 
-  if (m_mtw_params.reset_initial_orientation) {
+  if (mtw_params_.reset_initial_orientation) {
     resetInitialOrientation();
   }
 
@@ -71,12 +71,12 @@ void hiros::xsens_mtw::Wrapper::start()
 
 void hiros::xsens_mtw::Wrapper::run()
 {
-  if (m_wrapper_params.enable_external_sync
-      && std::find_if(m_mtw_params.sync_settings.begin(), m_mtw_params.sync_settings.end(), [](const XsSyncSetting& s) {
+  if (wrapper_params_.enable_external_sync
+      && std::find_if(mtw_params_.sync_settings.begin(), mtw_params_.sync_settings.end(), [](const XsSyncSetting& s) {
            return (s.m_line == XSL_In1 || s.m_line == XSL_In2);
-         }) != m_mtw_params.sync_settings.end()) {
+         }) != mtw_params_.sync_settings.end()) {
     std::set<XsSyncLine> active_sync_lines;
-    for (const auto& sync_setting : m_mtw_params.sync_settings) {
+    for (const auto& sync_setting : mtw_params_.sync_settings) {
       active_sync_lines.emplace(sync_setting.m_line);
     }
     std::string active_sync_lines_str;
@@ -91,23 +91,23 @@ void hiros::xsens_mtw::Wrapper::run()
   }
 
   std::unique_ptr<Synchronizer> sync;
-  if (m_wrapper_params.synchronize) {
-    sync = std::make_unique<Synchronizer>(m_mtw_callbacks, sync_policy_map.at(m_wrapper_params.sync_policy_name));
+  if (wrapper_params_.synchronize) {
+    sync = std::make_unique<Synchronizer>(mtw_callbacks_, sync_policy_map.at(wrapper_params_.sync_policy_name));
   }
 
   while (ros::ok() && !s_request_shutdown) {
-    for (auto& device : m_connected_devices) {
-      if (m_mtw_callbacks.at(device.first)->newDataAvailable()) {
-        if (m_wrapper_params.synchronize) {
-          sync->add(m_mtw_callbacks.at(device.first)->getLatestPacket());
+    for (auto& device : connected_devices_) {
+      if (mtw_callbacks_.at(device.first)->newDataAvailable()) {
+        if (wrapper_params_.synchronize) {
+          sync->add(mtw_callbacks_.at(device.first)->getLatestPacket());
         }
         else {
-          publishPacket(m_mtw_callbacks.at(device.first)->getLatestPacket());
-          m_mtw_callbacks.at(device.first)->deleteOldestPacket();
+          publishPacket(mtw_callbacks_.at(device.first)->getLatestPacket());
+          mtw_callbacks_.at(device.first)->deleteOldestPacket();
         }
       }
 
-      if (m_wrapper_params.synchronize) {
+      if (wrapper_params_.synchronize) {
         if (sync->newFrameAvailable()) {
           publishFrame(sync->getLatestFrame());
           sync->clearLatestFrame();
@@ -124,19 +124,19 @@ bool hiros::xsens_mtw::Wrapper::configure()
 {
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Configuring");
 
-  if (m_xsens_mtw_configured) {
-    m_xsens_mtw_configured = false;
+  if (xsens_mtw_configured_) {
+    xsens_mtw_configured_ = false;
     stop();
   }
 
   configureWrapper();
-  m_xsens_mtw_configured = configureXsensMtw();
+  xsens_mtw_configured_ = configureXsensMtw();
 
-  if (m_xsens_mtw_configured) {
+  if (xsens_mtw_configured_) {
     ROS_DEBUG_STREAM("Xsens Mtw Wrapper... CONFIGURED");
   }
 
-  return m_xsens_mtw_configured;
+  return xsens_mtw_configured_;
 }
 
 void hiros::xsens_mtw::Wrapper::stop()
@@ -156,22 +156,22 @@ void hiros::xsens_mtw::Wrapper::configureWrapper()
 {
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Configuring Wrapper");
 
-  m_nh.getParam("desired_update_rate", m_mtw_params.desired_update_rate);
-  m_nh.getParam("desired_radio_channel", m_mtw_params.desired_radio_channel);
-  m_nh.getParam("fixed_latency", m_mtw_params.fixed_latency);
-  m_mtw_params.fixed_latency = std::max(0., m_mtw_params.fixed_latency);
-  m_nh.getParam("reset_initial_orientation", m_mtw_params.reset_initial_orientation);
+  nh_.getParam("desired_update_rate", mtw_params_.desired_update_rate);
+  nh_.getParam("desired_radio_channel", mtw_params_.desired_radio_channel);
+  nh_.getParam("fixed_latency", mtw_params_.fixed_latency);
+  mtw_params_.fixed_latency = std::max(0., mtw_params_.fixed_latency);
+  nh_.getParam("reset_initial_orientation", mtw_params_.reset_initial_orientation);
 
-  m_nh.getParam("number_of_mtws", m_wrapper_params.number_of_mtws);
-  m_nh.getParam("tf_prefix", m_wrapper_params.tf_prefix);
-  m_nh.getParam("enable_custom_labeling", m_wrapper_params.enable_custom_labeling);
-  m_nh.getParam("enable_external_sync", m_wrapper_params.enable_external_sync);
+  nh_.getParam("number_of_mtws", wrapper_params_.number_of_mtws);
+  nh_.getParam("tf_prefix", wrapper_params_.tf_prefix);
+  nh_.getParam("enable_custom_labeling", wrapper_params_.enable_custom_labeling);
+  nh_.getParam("enable_external_sync", wrapper_params_.enable_external_sync);
 
-  m_nh.getParam("publish_only_recording", m_wrapper_params.publish_only_recording);
-  m_nh.getParam("synchronize", m_wrapper_params.synchronize);
-  m_nh.getParam("sync_policy", m_wrapper_params.sync_policy_name);
-  if (sync_policy_map.find(m_wrapper_params.sync_policy_name) == sync_policy_map.end()) {
-    ROS_WARN_STREAM("Xsens Mtw Wrapper... Sync policy " << m_wrapper_params.sync_policy_name << " is not supported");
+  nh_.getParam("publish_only_recording", wrapper_params_.publish_only_recording);
+  nh_.getParam("synchronize", wrapper_params_.synchronize);
+  nh_.getParam("sync_policy", wrapper_params_.sync_policy_name);
+  if (sync_policy_map.find(wrapper_params_.sync_policy_name) == sync_policy_map.end()) {
+    ROS_WARN_STREAM("Xsens Mtw Wrapper... Sync policy " << wrapper_params_.sync_policy_name << " is not supported");
     std::string supported_policies;
     for (auto& policy : sync_policy_map) {
       supported_policies += (policy.first + ", ");
@@ -179,48 +179,48 @@ void hiros::xsens_mtw::Wrapper::configureWrapper()
     ROS_WARN_STREAM(
       "Xsens Mtw Wrapper... Supported policies: " << supported_policies.erase(supported_policies.length() - 2));
     ROS_WARN_STREAM("Xsens Mtw Wrapper... Using " << sync_policy_map.rbegin()->first << " policy");
-    m_wrapper_params.sync_policy_name = sync_policy_map.rbegin()->first;
+    wrapper_params_.sync_policy_name = sync_policy_map.rbegin()->first;
   }
-  m_nh.getParam("publish_mimu_array", m_wrapper_params.publish_mimu_array);
+  nh_.getParam("publish_mimu_array", wrapper_params_.publish_mimu_array);
 
-  if (m_wrapper_params.publish_mimu_array && !m_wrapper_params.synchronize) {
+  if (wrapper_params_.publish_mimu_array && !wrapper_params_.synchronize) {
     ROS_FATAL_STREAM("Xsens Mtw Wrapper... Cannot publish MIMU array messages when Synchronizer is off. Closing");
     ros::shutdown();
     exit(EXIT_FAILURE);
   }
 
-  m_nh.getParam("publish_imu", m_wrapper_params.publish_imu);
-  m_nh.getParam("publish_mag", m_wrapper_params.publish_mag);
-  m_nh.getParam("publish_euler", m_wrapper_params.publish_euler);
-  m_nh.getParam("publish_free_acceleration", m_wrapper_params.publish_free_acceleration);
-  m_nh.getParam("publish_pressure", m_wrapper_params.publish_pressure);
-  m_nh.getParam("publish_tf", m_wrapper_params.publish_tf);
+  nh_.getParam("publish_imu", wrapper_params_.publish_imu);
+  nh_.getParam("publish_mag", wrapper_params_.publish_mag);
+  nh_.getParam("publish_euler", wrapper_params_.publish_euler);
+  nh_.getParam("publish_free_acceleration", wrapper_params_.publish_free_acceleration);
+  nh_.getParam("publish_pressure", wrapper_params_.publish_pressure);
+  nh_.getParam("publish_tf", wrapper_params_.publish_tf);
 
   bool nothing_to_publish =
-    !(m_wrapper_params.publish_imu || m_wrapper_params.publish_mag || m_wrapper_params.publish_euler
-      || m_wrapper_params.publish_free_acceleration || m_wrapper_params.publish_pressure);
+    !(wrapper_params_.publish_imu || wrapper_params_.publish_mag || wrapper_params_.publish_euler
+      || wrapper_params_.publish_free_acceleration || wrapper_params_.publish_pressure);
 
-  if (nothing_to_publish && !m_wrapper_params.publish_tf) {
+  if (nothing_to_publish && !wrapper_params_.publish_tf) {
     ROS_FATAL_STREAM("Xsens Mtw Wrapper... Nothing to publish. Closing");
     ros::shutdown();
     exit(EXIT_FAILURE);
   }
 
-  if (m_wrapper_params.enable_custom_labeling) {
+  if (wrapper_params_.enable_custom_labeling) {
     XmlRpc::XmlRpcValue xml_sensor_labels;
-    if (m_nh.getParam("sensor_labels", xml_sensor_labels)) {
+    if (nh_.getParam("sensor_labels", xml_sensor_labels)) {
 
       for (int i = 0; i < xml_sensor_labels.size(); ++i) {
-        m_ids_to_labels.emplace(utils::toXsDeviceId(xml_sensor_labels[i]["imu_id"]), xml_sensor_labels[i]["label"]);
-        m_labels_to_ids.emplace(xml_sensor_labels[i]["label"], utils::toXsDeviceId(xml_sensor_labels[i]["imu_id"]));
+        ids_to_labels_.emplace(utils::toXsDeviceId(xml_sensor_labels[i]["imu_id"]), xml_sensor_labels[i]["label"]);
+        labels_to_ids_.emplace(xml_sensor_labels[i]["label"], utils::toXsDeviceId(xml_sensor_labels[i]["imu_id"]));
       }
     }
   }
 
-  if (m_wrapper_params.enable_external_sync) {
+  if (wrapper_params_.enable_external_sync) {
     XmlRpc::XmlRpcValue xml_sync_settings;
-    if (m_nh.getParam("sync_settings", xml_sync_settings)) {
-      m_mtw_params.sync_settings.reserve(static_cast<unsigned long>(xml_sync_settings.size()));
+    if (nh_.getParam("sync_settings", xml_sync_settings)) {
+      mtw_params_.sync_settings.reserve(static_cast<unsigned long>(xml_sync_settings.size()));
 
       for (int i = 0; i < xml_sync_settings.size(); ++i) {
         XsSyncSetting sync_setting;
@@ -233,7 +233,7 @@ void hiros::xsens_mtw::Wrapper::configureWrapper()
         sync_setting.m_skipFactor = static_cast<uint16_t>(static_cast<int>(xml_sync_settings[i]["skip_factor"]));
         sync_setting.m_triggerOnce = static_cast<uint8_t>(static_cast<int>(xml_sync_settings[i]["trigger_once"]));
 
-        m_mtw_params.sync_settings.push_back(sync_setting);
+        mtw_params_.sync_settings.push_back(sync_setting);
       }
     }
   }
@@ -274,61 +274,61 @@ void hiros::xsens_mtw::Wrapper::stopXsensMtw()
   }
 
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Closing XsControl");
-  m_control->close();
+  control_->close();
 
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Deleting MTW callbacks");
-  for (auto& mtw_callback : m_mtw_callbacks) {
+  for (auto& mtw_callback : mtw_callbacks_) {
     delete (mtw_callback.second);
   }
-  m_mtw_callbacks.clear();
+  mtw_callbacks_.clear();
 
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Clearing MTW devices");
-  m_connected_devices.clear();
+  connected_devices_.clear();
 }
 
 void hiros::xsens_mtw::Wrapper::stopWrapper()
 {
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Shutting down ROS publisher(s)");
-  if (m_wrapper_params.publish_mimu_array) {
-    if (m_data_pub) {
-      m_data_pub.shutdown();
+  if (wrapper_params_.publish_mimu_array) {
+    if (data_pub_) {
+      data_pub_.shutdown();
     }
   }
   else {
-    if (m_wrapper_params.publish_imu) {
-      for (auto& pub : m_imu_pubs) {
+    if (wrapper_params_.publish_imu) {
+      for (auto& pub : imu_pubs_) {
         if (pub.second) {
           pub.second.shutdown();
         }
       }
     }
 
-    if (m_wrapper_params.publish_mag) {
-      for (auto& pub : m_mag_pubs) {
+    if (wrapper_params_.publish_mag) {
+      for (auto& pub : mag_pubs_) {
         if (pub.second) {
           pub.second.shutdown();
         }
       }
     }
 
-    if (m_wrapper_params.publish_euler) {
-      for (auto& pub : m_euler_pubs) {
+    if (wrapper_params_.publish_euler) {
+      for (auto& pub : euler_pubs_) {
         if (pub.second) {
           pub.second.shutdown();
         }
       }
     }
 
-    if (m_wrapper_params.publish_free_acceleration) {
-      for (auto& pub : m_free_acceleration_pubs) {
+    if (wrapper_params_.publish_free_acceleration) {
+      for (auto& pub : free_acceleration_pubs_) {
         if (pub.second) {
           pub.second.shutdown();
         }
       }
     }
 
-    if (m_wrapper_params.publish_pressure) {
-      for (auto& pub : m_pressure_pubs) {
+    if (wrapper_params_.publish_pressure) {
+      for (auto& pub : pressure_pubs_) {
         if (pub.second) {
           pub.second.shutdown();
         }
@@ -337,33 +337,33 @@ void hiros::xsens_mtw::Wrapper::stopWrapper()
   }
 
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Shutting down ROS service server(s)");
-  m_reset_orientation_srv.shutdown();
-  m_start_recording_srv.shutdown();
-  m_stop_recording_srv.shutdown();
+  reset_orientation_srv_.shutdown();
+  start_recording_srv_.shutdown();
+  stop_recording_srv_.shutdown();
 
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Clearing maps");
-  m_ids_to_labels.clear();
-  m_labels_to_ids.clear();
+  ids_to_labels_.clear();
+  labels_to_ids_.clear();
 }
 
 bool hiros::xsens_mtw::Wrapper::waitMtwConnection()
 {
   ROS_INFO_STREAM("Xsens Mtw Wrapper... Waiting for MTW to wirelessly connect");
 
-  if (m_wrapper_params.number_of_mtws <= 0) {
-    XsTime::msleep(m_connection_timeout);
-    m_number_of_connected_mtws = m_wireless_master_callback.getWirelessMTWs().size();
+  if (wrapper_params_.number_of_mtws <= 0) {
+    XsTime::msleep(connection_timeout_);
+    number_of_connected_mtws_ = wireless_master_callback_.getWirelessMTWs().size();
   }
   else {
-    while (m_number_of_connected_mtws < static_cast<unsigned int>(m_wrapper_params.number_of_mtws)) {
+    while (number_of_connected_mtws_ < static_cast<unsigned int>(wrapper_params_.number_of_mtws)) {
       XsTime::msleep(500);
-      m_number_of_connected_mtws = m_wireless_master_callback.getWirelessMTWs().size();
+      number_of_connected_mtws_ = wireless_master_callback_.getWirelessMTWs().size();
     }
   }
 
-  ROS_INFO_STREAM("Xsens Mtw Wrapper... Number of connected MTWs: " << m_number_of_connected_mtws);
+  ROS_INFO_STREAM("Xsens Mtw Wrapper... Number of connected MTWs: " << number_of_connected_mtws_);
 
-  if (m_number_of_connected_mtws == 0) {
+  if (number_of_connected_mtws_ == 0) {
     ROS_FATAL_STREAM("Xsens Mtw Wrapper... Failed to connect to MTWs");
     return false;
   }
@@ -375,11 +375,11 @@ bool hiros::xsens_mtw::Wrapper::getMtwsDeviceIstances()
 {
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Getting XsDevice instances for all MTWs");
 
-  for (auto& xs_device_id : m_control->deviceIds()) {
+  for (auto& xs_device_id : control_->deviceIds()) {
     if (xs_device_id.isMtw()) {
-      XsDevicePtr xs_device = m_control->device(xs_device_id);
+      XsDevicePtr xs_device = control_->device(xs_device_id);
       if (xs_device != nullptr) {
-        m_connected_devices.emplace(xs_device_id, xs_device);
+        connected_devices_.emplace(xs_device_id, xs_device);
       }
       else {
         ROS_FATAL_STREAM("Xsens Mtw Wrapper... Failed to create an MTW XsDevice instance");
@@ -396,9 +396,9 @@ void hiros::xsens_mtw::Wrapper::attachCallbackHandlers()
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Attaching callback handlers to MTWs");
 
   int mtw_index = 0;
-  for (auto& device : m_connected_devices) {
-    m_mtw_callbacks.emplace(device.first, new MtwCallback(mtw_index++, device.second));
-    device.second->addCallbackHandler(m_mtw_callbacks.at(device.first));
+  for (auto& device : connected_devices_) {
+    mtw_callbacks_.emplace(device.first, new MtwCallback(mtw_index++, device.second));
+    device.second->addCallbackHandler(mtw_callbacks_.at(device.first));
   }
 }
 
@@ -406,7 +406,7 @@ bool hiros::xsens_mtw::Wrapper::startMeasurement()
 {
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Starting measurement");
 
-  if (!m_wireless_master_device->gotoMeasurement()) {
+  if (!wireless_master_device_->gotoMeasurement()) {
     ROS_WARN_STREAM("Xsens Mtw Wrapper... Failed to go to measurement mode");
     return false;
   }
@@ -418,9 +418,9 @@ bool hiros::xsens_mtw::Wrapper::constructControl()
 {
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Constructing XsControl");
 
-  m_control = XsControl::construct();
+  control_ = XsControl::construct();
 
-  if (m_control == nullptr) {
+  if (control_ == nullptr) {
     ROS_FATAL_STREAM("Xsens Mtw Wrapper... Failed to construct XsControl instance");
     return false;
   }
@@ -432,21 +432,21 @@ bool hiros::xsens_mtw::Wrapper::findWirelessMaster()
 {
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Scanning ports");
 
-  m_detected_devices = XsScanner::scanPorts();
+  detected_devices_ = XsScanner::scanPorts();
 
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Finding wireless master");
 
-  m_wireless_master_port = m_detected_devices.begin();
-  while (m_wireless_master_port != m_detected_devices.end() && !m_wireless_master_port->deviceId().isWirelessMaster()) {
-    ++m_wireless_master_port;
+  wireless_master_port_ = detected_devices_.begin();
+  while (wireless_master_port_ != detected_devices_.end() && !wireless_master_port_->deviceId().isWirelessMaster()) {
+    ++wireless_master_port_;
   }
 
-  if (m_wireless_master_port == m_detected_devices.end()) {
+  if (wireless_master_port_ == detected_devices_.end()) {
     ROS_FATAL_STREAM("Xsens Mtw Wrapper... No wireless masters found");
     return false;
   }
 
-  ROS_INFO_STREAM("Xsens Mtw Wrapper... Wireless master found @ " << *m_wireless_master_port);
+  ROS_INFO_STREAM("Xsens Mtw Wrapper... Wireless master found @ " << *wireless_master_port_);
   return true;
 }
 
@@ -454,8 +454,8 @@ bool hiros::xsens_mtw::Wrapper::openPort()
 {
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Opening port");
 
-  if (!m_control->openPort(m_wireless_master_port->portName().toStdString(), m_wireless_master_port->baudrate())) {
-    ROS_FATAL_STREAM("Xsens Mtw Wrapper... Failed to open port " << *m_wireless_master_port);
+  if (!control_->openPort(wireless_master_port_->portName().toStdString(), wireless_master_port_->baudrate())) {
+    ROS_FATAL_STREAM("Xsens Mtw Wrapper... Failed to open port " << *wireless_master_port_);
     return false;
   }
 
@@ -466,13 +466,13 @@ bool hiros::xsens_mtw::Wrapper::getXsdeviceInstance()
 {
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Getting XsDevice instance for wireless master");
 
-  m_wireless_master_device = m_control->device(m_wireless_master_port->deviceId());
-  if (m_wireless_master_device == nullptr) {
-    ROS_FATAL_STREAM("Xsens Mtw Wrapper... Failed to construct XsDevice instance: " << *m_wireless_master_port);
+  wireless_master_device_ = control_->device(wireless_master_port_->deviceId());
+  if (wireless_master_device_ == nullptr) {
+    ROS_FATAL_STREAM("Xsens Mtw Wrapper... Failed to construct XsDevice instance: " << *wireless_master_port_);
     return false;
   }
 
-  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... XsDevice instance created @ " << utils::toString(*m_wireless_master_device));
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... XsDevice instance created @ " << utils::toString(*wireless_master_device_));
   return true;
 }
 
@@ -480,7 +480,7 @@ bool hiros::xsens_mtw::Wrapper::setSyncSettings()
 {
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Setting sync settings for wireless master");
 
-  if (!m_wireless_master_device->setSyncSettings(m_mtw_params.sync_settings)) {
+  if (!wireless_master_device_->setSyncSettings(mtw_params_.sync_settings)) {
     ROS_FATAL_STREAM("Xsens Mtw Wrapper... Failed to set sync settings");
     return false;
   }
@@ -492,8 +492,8 @@ bool hiros::xsens_mtw::Wrapper::setConfigMode()
 {
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Setting config mode");
 
-  if (!m_wireless_master_device->gotoConfig()) {
-    ROS_FATAL_STREAM("Xsens Mtw Wrapper... Failed to go to config mode: " + utils::toString(*m_wireless_master_device));
+  if (!wireless_master_device_->gotoConfig()) {
+    ROS_FATAL_STREAM("Xsens Mtw Wrapper... Failed to go to config mode: " + utils::toString(*wireless_master_device_));
     return false;
   }
 
@@ -504,35 +504,35 @@ void hiros::xsens_mtw::Wrapper::attachCallbackHandler()
 {
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Attaching callback handler");
 
-  m_wireless_master_device->addCallbackHandler(&m_wireless_master_callback);
+  wireless_master_device_->addCallbackHandler(&wireless_master_callback_);
 }
 
 bool hiros::xsens_mtw::Wrapper::getClosestUpdateRate()
 {
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Getting the list of the supported update rates");
 
-  m_supported_update_rates = m_wireless_master_device->supportedUpdateRates();
+  supported_update_rates_ = wireless_master_device_->supportedUpdateRates();
 
   std::string info_str = "Xsens Mtw Wrapper... Supported update rates:";
-  for (auto& up_rate : m_supported_update_rates) {
+  for (auto& up_rate : supported_update_rates_) {
     info_str += " " + std::to_string(up_rate);
   }
   ROS_INFO_STREAM(info_str);
 
-  if (m_supported_update_rates.empty()) {
+  if (supported_update_rates_.empty()) {
     ROS_FATAL_STREAM("Xsens Mtw Wrapper... Failed to get supported update rates");
     return false;
   }
 
-  if (m_supported_update_rates.size() == 1) {
-    m_update_rate = m_supported_update_rates.at(0);
+  if (supported_update_rates_.size() == 1) {
+    update_rate_ = supported_update_rates_.at(0);
   }
   else {
     int u_rate_dist = -1;
     int closest_update_rate = -1;
 
-    for (auto& up_rate : m_supported_update_rates) {
-      const int curr_dist = std::abs(up_rate - m_mtw_params.desired_update_rate);
+    for (auto& up_rate : supported_update_rates_) {
+      const int curr_dist = std::abs(up_rate - mtw_params_.desired_update_rate);
 
       if ((u_rate_dist == -1) || (curr_dist < u_rate_dist)) {
         u_rate_dist = curr_dist;
@@ -540,7 +540,7 @@ bool hiros::xsens_mtw::Wrapper::getClosestUpdateRate()
       }
     }
 
-    m_update_rate = closest_update_rate;
+    update_rate_ = closest_update_rate;
   }
 
   return true;
@@ -548,11 +548,11 @@ bool hiros::xsens_mtw::Wrapper::getClosestUpdateRate()
 
 bool hiros::xsens_mtw::Wrapper::setUpdateRate()
 {
-  ROS_INFO_STREAM(BASH_MSG_GREEN << "Xsens Mtw Wrapper... Setting update rate to " << m_update_rate << " Hz"
+  ROS_INFO_STREAM(BASH_MSG_GREEN << "Xsens Mtw Wrapper... Setting update rate to " << update_rate_ << " Hz"
                                  << BASH_MSG_RESET);
 
-  if (!m_wireless_master_device->setUpdateRate(m_update_rate)) {
-    ROS_FATAL_STREAM("Xsens Mtw Wrapper... Failed to set update rate: " << utils::toString(*m_wireless_master_device));
+  if (!wireless_master_device_->setUpdateRate(update_rate_)) {
+    ROS_FATAL_STREAM("Xsens Mtw Wrapper... Failed to set update rate: " << utils::toString(*wireless_master_device_));
     return false;
   }
 
@@ -561,18 +561,17 @@ bool hiros::xsens_mtw::Wrapper::setUpdateRate()
 
 bool hiros::xsens_mtw::Wrapper::setRadioChannel()
 {
-  if (m_wireless_master_device->isRadioEnabled()) {
+  if (wireless_master_device_->isRadioEnabled()) {
     ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Disabling previously enabled radio channel");
     if (!disableRadio()) {
       return false;
     }
   }
 
-  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Setting radio channel to " << m_mtw_params.desired_radio_channel
+  ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Setting radio channel to " << mtw_params_.desired_radio_channel
                                                                     << " and enabling radio");
-  if (!m_wireless_master_device->enableRadio(m_mtw_params.desired_radio_channel)) {
-    ROS_FATAL_STREAM(
-      "Xsens Mtw Wrapper... Failed to set radio channel: " << utils::toString(*m_wireless_master_device));
+  if (!wireless_master_device_->enableRadio(mtw_params_.desired_radio_channel)) {
+    ROS_FATAL_STREAM("Xsens Mtw Wrapper... Failed to set radio channel: " << utils::toString(*wireless_master_device_));
     return false;
   }
 
@@ -583,8 +582,8 @@ bool hiros::xsens_mtw::Wrapper::disableRadio()
 {
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Disabling radio");
 
-  if (!m_wireless_master_device->disableRadio()) {
-    ROS_FATAL_STREAM("Xsens Mtw Wrapper... Failed to disable radio: " << utils::toString(*m_wireless_master_device));
+  if (!wireless_master_device_->disableRadio()) {
+    ROS_FATAL_STREAM("Xsens Mtw Wrapper... Failed to disable radio: " << utils::toString(*wireless_master_device_));
     return false;
   }
 
@@ -595,44 +594,44 @@ void hiros::xsens_mtw::Wrapper::setupRos()
 {
   ROS_DEBUG_STREAM("Xsens Mtw Wrapper... Setting up ROS");
 
-  m_reset_orientation_srv = m_nh.advertiseService("reset_orientation", &Wrapper::resetOrientation, this);
-  m_start_recording_srv = m_nh.advertiseService("start_recording", &Wrapper::startRecording, this);
-  m_stop_recording_srv = m_nh.advertiseService("stop_recording", &Wrapper::stopRecording, this);
+  reset_orientation_srv_ = nh_.advertiseService("reset_orientation", &Wrapper::resetOrientation, this);
+  start_recording_srv_ = nh_.advertiseService("start_recording", &Wrapper::startRecording, this);
+  stop_recording_srv_ = nh_.advertiseService("stop_recording", &Wrapper::stopRecording, this);
 
-  if (m_wrapper_params.publish_mimu_array) {
-    m_data_pub = m_nh.advertise<hiros_xsens_mtw_wrapper::MIMUArray>("data", m_ros_topic_queue_size);
+  if (wrapper_params_.publish_mimu_array) {
+    data_pub_ = nh_.advertise<hiros_xsens_mtw_wrapper::MIMUArray>("mimu/data", ros_topic_queue_size_);
   }
   else {
-    for (auto& device : m_connected_devices) {
-      if (m_wrapper_params.publish_imu) {
-        m_imu_pubs.emplace(
+    for (auto& device : connected_devices_) {
+      if (wrapper_params_.publish_imu) {
+        imu_pubs_.emplace(
           device.first,
-          m_nh.advertise<sensor_msgs::Imu>(composeTopicPrefix(device.first) + "/imu/data", m_ros_topic_queue_size));
+          nh_.advertise<sensor_msgs::Imu>(composeTopicPrefix(device.first) + "/imu/data", ros_topic_queue_size_));
       }
 
-      if (m_wrapper_params.publish_mag) {
-        m_mag_pubs.emplace(device.first,
-                           m_nh.advertise<sensor_msgs::MagneticField>(composeTopicPrefix(device.first) + "/imu/mag",
-                                                                      m_ros_topic_queue_size));
+      if (wrapper_params_.publish_mag) {
+        mag_pubs_.emplace(device.first,
+                          nh_.advertise<sensor_msgs::MagneticField>(composeTopicPrefix(device.first) + "/imu/mag",
+                                                                    ros_topic_queue_size_));
       }
 
-      if (m_wrapper_params.publish_euler) {
-        m_euler_pubs.emplace(device.first,
-                             m_nh.advertise<hiros_xsens_mtw_wrapper::Euler>(
-                               composeTopicPrefix(device.first) + "/imu/euler", m_ros_topic_queue_size));
+      if (wrapper_params_.publish_euler) {
+        euler_pubs_.emplace(device.first,
+                            nh_.advertise<hiros_xsens_mtw_wrapper::Euler>(
+                              composeTopicPrefix(device.first) + "/imu/euler", ros_topic_queue_size_));
       }
 
-      if (m_wrapper_params.publish_free_acceleration) {
-        m_free_acceleration_pubs.emplace(
+      if (wrapper_params_.publish_free_acceleration) {
+        free_acceleration_pubs_.emplace(
           device.first,
-          m_nh.advertise<geometry_msgs::Vector3Stamped>(composeTopicPrefix(device.first) + "/filter/free_acceleration",
-                                                        m_ros_topic_queue_size));
+          nh_.advertise<geometry_msgs::Vector3Stamped>(composeTopicPrefix(device.first) + "/filter/free_acceleration",
+                                                       ros_topic_queue_size_));
       }
 
-      if (m_wrapper_params.publish_pressure) {
-        m_pressure_pubs.emplace(device.first,
-                                m_nh.advertise<sensor_msgs::FluidPressure>(
-                                  composeTopicPrefix(device.first) + "/pressure", m_ros_topic_queue_size));
+      if (wrapper_params_.publish_pressure) {
+        pressure_pubs_.emplace(device.first,
+                               nh_.advertise<sensor_msgs::FluidPressure>(composeTopicPrefix(device.first) + "/pressure",
+                                                                         ros_topic_queue_size_));
       }
     }
   }
@@ -640,11 +639,11 @@ void hiros::xsens_mtw::Wrapper::setupRos()
 
 void hiros::xsens_mtw::Wrapper::syncInitialPackets()
 {
-  double delta_t = 1 / static_cast<double>(m_update_rate);
+  double delta_t = 1 / static_cast<double>(update_rate_);
   std::map<XsDeviceId, bool> initial_new_packets_received;
   std::map<XsDeviceId, long> initial_packet_ids;
   std::map<XsDeviceId, double> initial_timestamps;
-  for (auto& device : m_connected_devices) {
+  for (auto& device : connected_devices_) {
     initial_new_packets_received.emplace(device.first, false);
     initial_packet_ids.emplace(device.first, -1);
     initial_timestamps.emplace(device.first, std::numeric_limits<double>::max());
@@ -652,9 +651,9 @@ void hiros::xsens_mtw::Wrapper::syncInitialPackets()
   bool got_all_initial_new_packets = false;
 
   while (!got_all_initial_new_packets) {
-    for (auto& device : m_connected_devices) {
-      if (!initial_new_packets_received.at(device.first) && m_mtw_callbacks.at(device.first)->newDataAvailable()) {
-        std::shared_ptr<XsDataPacket> packet = m_mtw_callbacks.at(device.first)->getLatestPacket();
+    for (auto& device : connected_devices_) {
+      if (!initial_new_packets_received.at(device.first) && mtw_callbacks_.at(device.first)->newDataAvailable()) {
+        std::shared_ptr<XsDataPacket> packet = mtw_callbacks_.at(device.first)->getLatestPacket();
 
         if ((packet->timeOfArrival().secTime() - initial_timestamps.at(device.first)) < (0.5 * delta_t)) {
           // First message
@@ -669,7 +668,7 @@ void hiros::xsens_mtw::Wrapper::syncInitialPackets()
           initial_new_packets_received.at(device.first) = true;
         }
 
-        m_mtw_callbacks.at(device.first)->deleteOldestPacket();
+        mtw_callbacks_.at(device.first)->deleteOldestPacket();
       }
     }
 
@@ -679,24 +678,24 @@ void hiros::xsens_mtw::Wrapper::syncInitialPackets()
                   [](std::map<XsDeviceId, bool>::const_reference p) { return p.second == true; });
   }
 
-  m_initial_packet_id =
+  initial_packet_id_ =
     std::max_element(initial_packet_ids.begin(),
                      initial_packet_ids.end(),
                      [](std::map<XsDeviceId, long>::const_reference p1,
                         std::map<XsDeviceId, long>::const_reference p2) { return p1.second < p2.second; })
       ->second;
 
-  for (auto& device : m_connected_devices) {
-    initial_timestamps.at(device.first) += ((m_initial_packet_id - initial_packet_ids.at(device.first)) * delta_t);
+  for (auto& device : connected_devices_) {
+    initial_timestamps.at(device.first) += ((initial_packet_id_ - initial_packet_ids.at(device.first)) * delta_t);
   }
 
-  m_initial_timestamp =
+  initial_timestamp_ =
     ros::Time(std::min_element(initial_timestamps.begin(),
                                initial_timestamps.end(),
                                [](std::map<XsDeviceId, double>::const_reference t1,
                                   std::map<XsDeviceId, double>::const_reference t2) { return t1.second < t2.second; })
                 ->second
-              - m_mtw_params.fixed_latency);
+              - mtw_params_.fixed_latency);
 }
 
 bool hiros::xsens_mtw::Wrapper::resetInitialOrientation() const
@@ -705,7 +704,7 @@ bool hiros::xsens_mtw::Wrapper::resetInitialOrientation() const
 
   bool success = true;
 
-  for (auto& device : m_connected_devices) {
+  for (auto& device : connected_devices_) {
     success = device.second->resetOrientation(XRM_Heading) && success;
   }
 
@@ -716,110 +715,108 @@ bool hiros::xsens_mtw::Wrapper::resetInitialOrientation() const
   return success;
 }
 
-std::string hiros::xsens_mtw::Wrapper::getDeviceLabel(const XsDeviceId& t_id) const
+std::string hiros::xsens_mtw::Wrapper::getDeviceLabel(const XsDeviceId& id) const
 {
-  return (m_ids_to_labels.find(t_id) != m_ids_to_labels.end()) ? m_ids_to_labels.at(t_id)
-                                                               : t_id.toString().toStdString();
+  return (ids_to_labels_.find(id) != ids_to_labels_.end()) ? ids_to_labels_.at(id) : id.toString().toStdString();
 }
 
-XsDeviceId hiros::xsens_mtw::Wrapper::getDeviceId(const std::string t_label) const
+XsDeviceId hiros::xsens_mtw::Wrapper::getDeviceId(const std::string label) const
 {
-  return (m_labels_to_ids.find(t_label) != m_labels_to_ids.end()) ? m_labels_to_ids.at(t_label)
-                                                                  : utils::toXsDeviceId(t_label);
+  return (labels_to_ids_.find(label) != labels_to_ids_.end()) ? labels_to_ids_.at(label) : utils::toXsDeviceId(label);
 }
 
-std::string hiros::xsens_mtw::Wrapper::composeTopicPrefix(const XsDeviceId& t_id) const
+std::string hiros::xsens_mtw::Wrapper::composeTopicPrefix(const XsDeviceId& id) const
 {
-  return "/" + m_node_namespace + "/" + getDeviceLabel(t_id);
+  return "/" + node_namespace_ + "/" + getDeviceLabel(id);
 }
 
-void hiros::xsens_mtw::Wrapper::publishPacket(std::shared_ptr<XsDataPacket> t_packet)
+void hiros::xsens_mtw::Wrapper::publishPacket(std::shared_ptr<XsDataPacket> packet)
 {
-  if (m_wrapper_params.publish_only_recording && !m_wireless_master_device->isRecording()) {
+  if (wrapper_params_.publish_only_recording && !wireless_master_device_->isRecording()) {
     return;
   }
 
-  if (m_wrapper_params.publish_imu && t_packet->containsOrientation() && t_packet->containsCalibratedGyroscopeData()
-      && t_packet->containsCalibratedAcceleration()) {
-    m_imu_pubs.at(t_packet->deviceId()).publish(getImuMsg(t_packet));
+  if (wrapper_params_.publish_imu && packet->containsOrientation() && packet->containsCalibratedGyroscopeData()
+      && packet->containsCalibratedAcceleration()) {
+    imu_pubs_.at(packet->deviceId()).publish(getImuMsg(packet));
   }
 
-  if (m_wrapper_params.publish_mag && t_packet->containsCalibratedMagneticField()) {
-    m_mag_pubs.at(t_packet->deviceId()).publish(getMagMsg(t_packet));
+  if (wrapper_params_.publish_mag && packet->containsCalibratedMagneticField()) {
+    mag_pubs_.at(packet->deviceId()).publish(getMagMsg(packet));
   }
 
-  if (m_wrapper_params.publish_euler && t_packet->containsOrientation()) {
-    m_euler_pubs.at(t_packet->deviceId()).publish(getEulerMsg(t_packet));
+  if (wrapper_params_.publish_euler && packet->containsOrientation()) {
+    euler_pubs_.at(packet->deviceId()).publish(getEulerMsg(packet));
   }
 
-  if (m_wrapper_params.publish_free_acceleration && t_packet->containsFreeAcceleration()) {
-    m_free_acceleration_pubs.at(t_packet->deviceId()).publish(getFreeAccelerationMsg(t_packet));
+  if (wrapper_params_.publish_free_acceleration && packet->containsFreeAcceleration()) {
+    free_acceleration_pubs_.at(packet->deviceId()).publish(getFreeAccelerationMsg(packet));
   }
 
-  if (m_wrapper_params.publish_pressure && t_packet->containsPressure()) {
-    m_pressure_pubs.at(t_packet->deviceId()).publish(getPressureMsg(t_packet));
+  if (wrapper_params_.publish_pressure && packet->containsPressure()) {
+    pressure_pubs_.at(packet->deviceId()).publish(getPressureMsg(packet));
   }
 
-  if (m_wrapper_params.publish_tf && t_packet->containsOrientation()) {
-    m_tf_broadcaster.sendTransform(getTf(t_packet));
+  if (wrapper_params_.publish_tf && packet->containsOrientation()) {
+    tf_broadcaster_.sendTransform(getTf(packet));
   }
 }
 
-void hiros::xsens_mtw::Wrapper::publishFrame(const std::vector<std::shared_ptr<XsDataPacket>>& t_frame)
+void hiros::xsens_mtw::Wrapper::publishFrame(const std::vector<std::shared_ptr<XsDataPacket>>& frame)
 {
-  if (m_wrapper_params.publish_only_recording && !m_wireless_master_device->isRecording()) {
+  if (wrapper_params_.publish_only_recording && !wireless_master_device_->isRecording()) {
     return;
   }
 
-  if (m_wrapper_params.publish_mimu_array) {
-    m_data_pub.publish(getMIMUArrayMsg(t_frame));
+  if (wrapper_params_.publish_mimu_array) {
+    data_pub_.publish(getMIMUArrayMsg(frame));
 
-    if (m_wrapper_params.publish_tf) {
-      for (auto& packet : t_frame) {
+    if (wrapper_params_.publish_tf) {
+      for (auto& packet : frame) {
         if (packet->containsOrientation()) {
-          m_tf_broadcaster.sendTransform(getTf(packet));
+          tf_broadcaster_.sendTransform(getTf(packet));
         }
       }
     }
   }
   else {
-    for (auto& packet : t_frame) {
+    for (auto& packet : frame) {
       publishPacket(packet);
     }
   }
 }
 
-std_msgs::Header hiros::xsens_mtw::Wrapper::getHeader(std::shared_ptr<XsDataPacket> t_packet) const
+std_msgs::Header hiros::xsens_mtw::Wrapper::getHeader(std::shared_ptr<XsDataPacket> packet) const
 {
   std_msgs::Header header;
 
-  header.seq = static_cast<unsigned int>(t_packet->packetId());
-  header.stamp = m_initial_timestamp
-                 + ros::Duration((t_packet->packetId() - m_initial_packet_id) / static_cast<double>(m_update_rate));
-  header.frame_id = m_wrapper_params.tf_prefix + getDeviceLabel(t_packet->deviceId());
+  header.seq = static_cast<unsigned int>(packet->packetId());
+  header.stamp =
+    initial_timestamp_ + ros::Duration((packet->packetId() - initial_packet_id_) / static_cast<double>(update_rate_));
+  header.frame_id = wrapper_params_.tf_prefix + getDeviceLabel(packet->deviceId());
 
   return header;
 }
 
-sensor_msgs::Imu hiros::xsens_mtw::Wrapper::getImuMsg(std::shared_ptr<XsDataPacket> t_packet) const
+sensor_msgs::Imu hiros::xsens_mtw::Wrapper::getImuMsg(std::shared_ptr<XsDataPacket> packet) const
 {
   sensor_msgs::Imu out_msg;
-  out_msg.header = getHeader(t_packet);
+  out_msg.header = getHeader(packet);
 
-  out_msg.orientation.x = t_packet->orientationQuaternion().x();
-  out_msg.orientation.y = t_packet->orientationQuaternion().y();
-  out_msg.orientation.z = t_packet->orientationQuaternion().z();
-  out_msg.orientation.w = t_packet->orientationQuaternion().w();
+  out_msg.orientation.x = packet->orientationQuaternion().x();
+  out_msg.orientation.y = packet->orientationQuaternion().y();
+  out_msg.orientation.z = packet->orientationQuaternion().z();
+  out_msg.orientation.w = packet->orientationQuaternion().w();
   out_msg.orientation_covariance.front() = 0.0;
 
-  out_msg.angular_velocity.x = t_packet->calibratedGyroscopeData().at(0);
-  out_msg.angular_velocity.y = t_packet->calibratedGyroscopeData().at(1);
-  out_msg.angular_velocity.z = t_packet->calibratedGyroscopeData().at(2);
+  out_msg.angular_velocity.x = packet->calibratedGyroscopeData().at(0);
+  out_msg.angular_velocity.y = packet->calibratedGyroscopeData().at(1);
+  out_msg.angular_velocity.z = packet->calibratedGyroscopeData().at(2);
   out_msg.angular_velocity_covariance.front() = 0.0;
 
-  out_msg.linear_acceleration.x = t_packet->calibratedAcceleration().at(0);
-  out_msg.linear_acceleration.y = t_packet->calibratedAcceleration().at(1);
-  out_msg.linear_acceleration.z = t_packet->calibratedAcceleration().at(2);
+  out_msg.linear_acceleration.x = packet->calibratedAcceleration().at(0);
+  out_msg.linear_acceleration.y = packet->calibratedAcceleration().at(1);
+  out_msg.linear_acceleration.z = packet->calibratedAcceleration().at(2);
   out_msg.linear_acceleration_covariance.front() = 0.0;
 
   return out_msg;
@@ -838,30 +835,30 @@ sensor_msgs::MagneticField hiros::xsens_mtw::Wrapper::getMagMsg(std::shared_ptr<
   return out_msg;
 }
 
-hiros_xsens_mtw_wrapper::Euler hiros::xsens_mtw::Wrapper::getEulerMsg(std::shared_ptr<XsDataPacket> t_packet) const
+hiros_xsens_mtw_wrapper::Euler hiros::xsens_mtw::Wrapper::getEulerMsg(std::shared_ptr<XsDataPacket> packet) const
 {
   hiros_xsens_mtw_wrapper::Euler out_msg;
-  out_msg.header = getHeader(t_packet);
+  out_msg.header = getHeader(packet);
 
   // roll = atan2(2 * (qw * qx + qy * qz), (1 - 2 * (pow(qx, 2) + pow(qy, 2))))
-  out_msg.roll = t_packet->orientationEuler().roll();
+  out_msg.roll = packet->orientationEuler().roll();
   // pitch = asin(2 * (qw * qy - qz * qx))
-  out_msg.pitch = t_packet->orientationEuler().pitch();
+  out_msg.pitch = packet->orientationEuler().pitch();
   // yaw = atan2(2 * (qw * qz + qx * qy), (1 - 2 * (pow(qy, 2) + pow(qz, 2))))
-  out_msg.yaw = t_packet->orientationEuler().yaw();
+  out_msg.yaw = packet->orientationEuler().yaw();
 
   return out_msg;
 }
 
 geometry_msgs::Vector3Stamped
-hiros::xsens_mtw::Wrapper::getFreeAccelerationMsg(std::shared_ptr<XsDataPacket> t_packet) const
+hiros::xsens_mtw::Wrapper::getFreeAccelerationMsg(std::shared_ptr<XsDataPacket> packet) const
 {
   geometry_msgs::Vector3Stamped out_msg;
-  out_msg.header = getHeader(t_packet);
+  out_msg.header = getHeader(packet);
 
-  out_msg.vector.x = t_packet->freeAcceleration().at(0);
-  out_msg.vector.y = t_packet->freeAcceleration().at(1);
-  out_msg.vector.z = t_packet->freeAcceleration().at(2);
+  out_msg.vector.x = packet->freeAcceleration().at(0);
+  out_msg.vector.y = packet->freeAcceleration().at(1);
+  out_msg.vector.z = packet->freeAcceleration().at(2);
 
   return out_msg;
 }
@@ -877,82 +874,82 @@ sensor_msgs::FluidPressure hiros::xsens_mtw::Wrapper::getPressureMsg(std::shared
   return out_msg;
 }
 
-hiros_xsens_mtw_wrapper::MIMU hiros::xsens_mtw::Wrapper::getMIMUMsg(std::shared_ptr<XsDataPacket> t_packet) const
+hiros_xsens_mtw_wrapper::MIMU hiros::xsens_mtw::Wrapper::getMIMUMsg(std::shared_ptr<XsDataPacket> packet) const
 {
   hiros_xsens_mtw_wrapper::MIMU out_msg;
 
-  if (m_wrapper_params.publish_imu && t_packet->containsOrientation() && t_packet->containsCalibratedGyroscopeData()
-      && t_packet->containsCalibratedAcceleration()) {
-    out_msg.imu = getImuMsg(t_packet);
+  if (wrapper_params_.publish_imu && packet->containsOrientation() && packet->containsCalibratedGyroscopeData()
+      && packet->containsCalibratedAcceleration()) {
+    out_msg.imu = getImuMsg(packet);
   }
 
-  if (m_wrapper_params.publish_mag && t_packet->containsCalibratedMagneticField()) {
-    out_msg.mag = getMagMsg(t_packet);
+  if (wrapper_params_.publish_mag && packet->containsCalibratedMagneticField()) {
+    out_msg.mag = getMagMsg(packet);
   }
 
-  if (m_wrapper_params.publish_euler && t_packet->containsOrientation()) {
-    out_msg.euler = getEulerMsg(t_packet);
+  if (wrapper_params_.publish_euler && packet->containsOrientation()) {
+    out_msg.euler = getEulerMsg(packet);
   }
 
-  if (m_wrapper_params.publish_free_acceleration && t_packet->containsFreeAcceleration()) {
-    out_msg.free_acceleration = getFreeAccelerationMsg(t_packet);
+  if (wrapper_params_.publish_free_acceleration && packet->containsFreeAcceleration()) {
+    out_msg.free_acceleration = getFreeAccelerationMsg(packet);
   }
 
-  if (m_wrapper_params.publish_pressure && t_packet->containsPressure()) {
-    out_msg.pressure = getPressureMsg(t_packet);
+  if (wrapper_params_.publish_pressure && packet->containsPressure()) {
+    out_msg.pressure = getPressureMsg(packet);
   }
 
   return out_msg;
 }
 
 hiros_xsens_mtw_wrapper::MIMUArray
-hiros::xsens_mtw::Wrapper::getMIMUArrayMsg(const std::vector<std::shared_ptr<XsDataPacket>>& t_frame) const
+hiros::xsens_mtw::Wrapper::getMIMUArrayMsg(const std::vector<std::shared_ptr<XsDataPacket>>& frame) const
 {
   hiros_xsens_mtw_wrapper::MIMUArray out_msg;
 
-  for (auto& packet : t_frame) {
+  for (auto& packet : frame) {
     out_msg.mimus.push_back(getMIMUMsg(packet));
   }
 
   return out_msg;
 }
 
-geometry_msgs::TransformStamped hiros::xsens_mtw::Wrapper::getTf(std::shared_ptr<XsDataPacket> t_packet) const
+geometry_msgs::TransformStamped hiros::xsens_mtw::Wrapper::getTf(std::shared_ptr<XsDataPacket> packet) const
 {
   geometry_msgs::TransformStamped tf;
-  tf.header = getHeader(t_packet);
+  tf.header = getHeader(packet);
   tf.header.frame_id = "world";
-  tf.child_frame_id = m_wrapper_params.tf_prefix + getDeviceLabel(t_packet->deviceId());
+  tf.child_frame_id = wrapper_params_.tf_prefix + getDeviceLabel(packet->deviceId());
 
   tf.transform.translation.x = 0.0;
   tf.transform.translation.y = 0.0;
   tf.transform.translation.z = 0.0;
-  tf.transform.rotation.x = t_packet->orientationQuaternion().x();
-  tf.transform.rotation.y = t_packet->orientationQuaternion().y();
-  tf.transform.rotation.z = t_packet->orientationQuaternion().z();
-  tf.transform.rotation.w = t_packet->orientationQuaternion().w();
+  tf.transform.rotation.x = packet->orientationQuaternion().x();
+  tf.transform.rotation.y = packet->orientationQuaternion().y();
+  tf.transform.rotation.z = packet->orientationQuaternion().z();
+  tf.transform.rotation.w = packet->orientationQuaternion().w();
 
   return tf;
 }
 
-bool hiros::xsens_mtw::Wrapper::resetOrientation(hiros_xsens_mtw_wrapper::ResetOrientation::Request& t_req,
-                                                 hiros_xsens_mtw_wrapper::ResetOrientation::Response& t_res)
+bool hiros::xsens_mtw::Wrapper::resetOrientation(hiros_xsens_mtw_wrapper::ResetOrientation::Request& req,
+                                                 hiros_xsens_mtw_wrapper::ResetOrientation::Response& res)
 {
   bool success = true;
 
-  if (t_req.sensors.empty()) {
+  if (req.sensors.empty()) {
     ROS_INFO_STREAM(BASH_MSG_GREEN << "Xsens Mtw Wrapper... Resetting orientation of all connected sensors"
                                    << BASH_MSG_RESET);
-    for (auto& device : m_connected_devices) {
+    for (auto& device : connected_devices_) {
       success = device.second->resetOrientation(XRM_Alignment) && success;
     }
   }
   else {
-    for (auto& sensor_label : t_req.sensors) {
-      if (m_connected_devices.find(getDeviceId(sensor_label)) != m_connected_devices.end()) {
+    for (auto& sensor_label : req.sensors) {
+      if (connected_devices_.find(getDeviceId(sensor_label)) != connected_devices_.end()) {
         ROS_INFO_STREAM(BASH_MSG_GREEN << "Xsens Mtw Wrapper... Resetting orientation of '" << sensor_label << "'"
                                        << BASH_MSG_RESET);
-        success = m_connected_devices.at(getDeviceId(sensor_label))->resetOrientation(XRM_Alignment) && success;
+        success = connected_devices_.at(getDeviceId(sensor_label))->resetOrientation(XRM_Alignment) && success;
       }
       else {
         ROS_WARN_STREAM("Xsens Mtw Wrapper... Cannot find '" << sensor_label << "'");
@@ -964,10 +961,10 @@ bool hiros::xsens_mtw::Wrapper::resetOrientation(hiros_xsens_mtw_wrapper::ResetO
   return success;
 }
 
-bool hiros::xsens_mtw::Wrapper::startRecording(hiros_xsens_mtw_wrapper::StartRecording::Request& t_req,
-                                               hiros_xsens_mtw_wrapper::StartRecording::Response& t_res)
+bool hiros::xsens_mtw::Wrapper::startRecording(hiros_xsens_mtw_wrapper::StartRecording::Request& req,
+                                               hiros_xsens_mtw_wrapper::StartRecording::Response& res)
 {
-  if (!m_wireless_master_device->startRecording()) {
+  if (!wireless_master_device_->startRecording()) {
     ROS_WARN_STREAM("Xsens Mtw Wrapper... Failed to start recording");
     return false;
   }
@@ -976,10 +973,10 @@ bool hiros::xsens_mtw::Wrapper::startRecording(hiros_xsens_mtw_wrapper::StartRec
   return true;
 }
 
-bool hiros::xsens_mtw::Wrapper::stopRecording(hiros_xsens_mtw_wrapper::StopRecording::Request& t_req,
-                                              hiros_xsens_mtw_wrapper::StopRecording::Response& t_res)
+bool hiros::xsens_mtw::Wrapper::stopRecording(hiros_xsens_mtw_wrapper::StopRecording::Request& req,
+                                              hiros_xsens_mtw_wrapper::StopRecording::Response& res)
 {
-  if (!m_wireless_master_device->stopRecording()) {
+  if (!wireless_master_device_->stopRecording()) {
     ROS_WARN_STREAM("Xsens Mtw Wrapper... Failed to stop recording");
     return false;
   }

@@ -19,11 +19,11 @@ namespace hiros {
       utils::XsDeviceSet getWirelessMTWs() const;
 
     protected:
-      virtual void onConnectivityChanged(XsDevice* t_device, XsConnectivityState t_new_state);
+      virtual void onConnectivityChanged(XsDevice* device, XsConnectivityState new_state);
 
     private:
-      mutable XsMutex m_mutex;
-      utils::XsDeviceSet m_connected_mtws;
+      mutable XsMutex mutex_;
+      utils::XsDeviceSet connected_mtws_;
     };
 
   } // namespace xsens_mtw

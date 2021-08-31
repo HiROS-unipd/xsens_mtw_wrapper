@@ -130,93 +130,92 @@ namespace hiros {
       bool disableRadio();
 
       template <class T>
-      T getSetting(const std::string& t_setting_name, const std::map<std::string, T>& t_setting_map) const
+      T getSetting(const std::string& setting_name, const std::map<std::string, T>& setting_map) const
       {
-        if (t_setting_map.count(t_setting_name) == 0) {
-          ROS_FATAL_STREAM("Xsens Mtw Wrapper... Unsupported setting '" << t_setting_name << "'.");
+        if (setting_map.count(setting_name) == 0) {
+          ROS_FATAL_STREAM("Xsens Mtw Wrapper... Unsupported setting '" << setting_name << "'.");
           ROS_FATAL_STREAM("Xsens Mtw Wrapper... Supported settings are:");
-          for (const auto& pair : t_setting_map) {
+          for (const auto& pair : setting_map) {
             ROS_FATAL_STREAM("Xsens Mtw Wrapper...     - " << pair.first);
           }
           ROS_FATAL_STREAM("Xsens Mtw Wrapper... Closing");
           ros::shutdown();
           exit(EXIT_FAILURE);
         }
-        return t_setting_map.at(t_setting_name);
+        return setting_map.at(setting_name);
       }
 
       void setupRos();
       bool resetInitialOrientation() const;
       void syncInitialPackets();
 
-      std::string getDeviceLabel(const XsDeviceId& t_id) const;
-      XsDeviceId getDeviceId(const std::string t_label) const;
-      std::string composeTopicPrefix(const XsDeviceId& t_id) const;
+      std::string getDeviceLabel(const XsDeviceId& id) const;
+      XsDeviceId getDeviceId(const std::string label) const;
+      std::string composeTopicPrefix(const XsDeviceId& id) const;
 
-      void publishPacket(std::shared_ptr<XsDataPacket> t_packet);
-      void publishFrame(const std::vector<std::shared_ptr<XsDataPacket>>& t_frame);
+      void publishPacket(std::shared_ptr<XsDataPacket> packet);
+      void publishFrame(const std::vector<std::shared_ptr<XsDataPacket>>& frame);
 
-      std_msgs::Header getHeader(std::shared_ptr<XsDataPacket> t_packet) const;
-      sensor_msgs::Imu getImuMsg(std::shared_ptr<XsDataPacket> t_packet) const;
-      sensor_msgs::MagneticField getMagMsg(std::shared_ptr<XsDataPacket> t_packet) const;
-      hiros_xsens_mtw_wrapper::Euler getEulerMsg(std::shared_ptr<XsDataPacket> t_packet) const;
-      geometry_msgs::Vector3Stamped getFreeAccelerationMsg(std::shared_ptr<XsDataPacket> t_packet) const;
-      sensor_msgs::FluidPressure getPressureMsg(std::shared_ptr<XsDataPacket> t_packet) const;
-      hiros_xsens_mtw_wrapper::MIMU getMIMUMsg(std::shared_ptr<XsDataPacket> t_packet) const;
-      hiros_xsens_mtw_wrapper::MIMUArray
-      getMIMUArrayMsg(const std::vector<std::shared_ptr<XsDataPacket>>& t_frame) const;
-      geometry_msgs::TransformStamped getTf(std::shared_ptr<XsDataPacket> t_packet) const;
+      std_msgs::Header getHeader(std::shared_ptr<XsDataPacket> packet) const;
+      sensor_msgs::Imu getImuMsg(std::shared_ptr<XsDataPacket> packet) const;
+      sensor_msgs::MagneticField getMagMsg(std::shared_ptr<XsDataPacket> packet) const;
+      hiros_xsens_mtw_wrapper::Euler getEulerMsg(std::shared_ptr<XsDataPacket> packet) const;
+      geometry_msgs::Vector3Stamped getFreeAccelerationMsg(std::shared_ptr<XsDataPacket> packet) const;
+      sensor_msgs::FluidPressure getPressureMsg(std::shared_ptr<XsDataPacket> packet) const;
+      hiros_xsens_mtw_wrapper::MIMU getMIMUMsg(std::shared_ptr<XsDataPacket> packet) const;
+      hiros_xsens_mtw_wrapper::MIMUArray getMIMUArrayMsg(const std::vector<std::shared_ptr<XsDataPacket>>& frame) const;
+      geometry_msgs::TransformStamped getTf(std::shared_ptr<XsDataPacket> packet) const;
 
-      bool resetOrientation(hiros_xsens_mtw_wrapper::ResetOrientation::Request& t_req,
-                            hiros_xsens_mtw_wrapper::ResetOrientation::Response& t_res);
-      bool startRecording(hiros_xsens_mtw_wrapper::StartRecording::Request& t_req,
-                          hiros_xsens_mtw_wrapper::StartRecording::Response& t_res);
-      bool stopRecording(hiros_xsens_mtw_wrapper::StopRecording::Request& t_req,
-                         hiros_xsens_mtw_wrapper::StopRecording::Response& t_res);
+      bool resetOrientation(hiros_xsens_mtw_wrapper::ResetOrientation::Request& req,
+                            hiros_xsens_mtw_wrapper::ResetOrientation::Response& res);
+      bool startRecording(hiros_xsens_mtw_wrapper::StartRecording::Request& req,
+                          hiros_xsens_mtw_wrapper::StartRecording::Response& res);
+      bool stopRecording(hiros_xsens_mtw_wrapper::StopRecording::Request& req,
+                         hiros_xsens_mtw_wrapper::StopRecording::Response& res);
 
-      static inline void sighandler(int t_sig) { s_request_shutdown = (t_sig == SIGINT); };
+      static inline void sighandler(int sig) { s_request_shutdown = (sig == SIGINT); }
 
-      XsensMtwParameters m_mtw_params;
-      WrapperParameters m_wrapper_params;
+      XsensMtwParameters mtw_params_;
+      WrapperParameters wrapper_params_;
 
-      WirelessMasterCallback m_wireless_master_callback;
-      std::map<XsDeviceId, MtwCallback*> m_mtw_callbacks;
+      WirelessMasterCallback wireless_master_callback_;
+      std::map<XsDeviceId, MtwCallback*> mtw_callbacks_;
 
-      XsControl* m_control;
-      XsPortInfoArray m_detected_devices;
-      XsPortInfoArray::const_iterator m_wireless_master_port;
-      XsDevicePtr m_wireless_master_device;
+      XsControl* control_;
+      XsPortInfoArray detected_devices_;
+      XsPortInfoArray::const_iterator wireless_master_port_;
+      XsDevicePtr wireless_master_device_;
 
-      XsIntArray m_supported_update_rates;
-      int m_update_rate;
+      XsIntArray supported_update_rates_;
+      int update_rate_;
 
-      const unsigned int m_connection_timeout = 5000; // [ms]
-      unsigned long m_number_of_connected_mtws;
+      const unsigned int connection_timeout_ = 5000; // [ms]
+      unsigned long number_of_connected_mtws_;
 
-      std::map<XsDeviceId, XsDevicePtr> m_connected_devices;
-      std::map<XsDeviceId, std::string> m_ids_to_labels;
-      std::map<std::string, XsDeviceId> m_labels_to_ids;
+      std::map<XsDeviceId, XsDevicePtr> connected_devices_;
+      std::map<XsDeviceId, std::string> ids_to_labels_;
+      std::map<std::string, XsDeviceId> labels_to_ids_;
 
-      long m_initial_packet_id;
-      ros::Time m_initial_timestamp;
+      long initial_packet_id_;
+      ros::Time initial_timestamp_;
 
-      bool m_xsens_mtw_configured;
+      bool xsens_mtw_configured_;
 
-      ros::NodeHandle m_nh;
-      std::string m_node_namespace;
+      ros::NodeHandle nh_;
+      std::string node_namespace_;
 
-      const unsigned int m_ros_topic_queue_size = 10;
+      const unsigned int ros_topic_queue_size_ = 10;
 
-      ros::ServiceServer m_reset_orientation_srv;
-      ros::ServiceServer m_start_recording_srv;
-      ros::ServiceServer m_stop_recording_srv;
-      ros::Publisher m_data_pub;
-      std::map<XsDeviceId, ros::Publisher> m_imu_pubs;
-      std::map<XsDeviceId, ros::Publisher> m_mag_pubs;
-      std::map<XsDeviceId, ros::Publisher> m_euler_pubs;
-      std::map<XsDeviceId, ros::Publisher> m_free_acceleration_pubs;
-      std::map<XsDeviceId, ros::Publisher> m_pressure_pubs;
-      tf2_ros::TransformBroadcaster m_tf_broadcaster;
+      ros::ServiceServer reset_orientation_srv_;
+      ros::ServiceServer start_recording_srv_;
+      ros::ServiceServer stop_recording_srv_;
+      ros::Publisher data_pub_;
+      std::map<XsDeviceId, ros::Publisher> imu_pubs_;
+      std::map<XsDeviceId, ros::Publisher> mag_pubs_;
+      std::map<XsDeviceId, ros::Publisher> euler_pubs_;
+      std::map<XsDeviceId, ros::Publisher> free_acceleration_pubs_;
+      std::map<XsDeviceId, ros::Publisher> pressure_pubs_;
+      tf2_ros::TransformBroadcaster tf_broadcaster_;
 
       static bool s_request_shutdown;
     };

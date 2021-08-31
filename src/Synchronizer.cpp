@@ -2,30 +2,30 @@
 #include "xsens_mtw/Synchronizer.h"
 #include "xsens_mtw/utils.h"
 
-hiros::xsens_mtw::Synchronizer::Synchronizer(const std::map<XsDeviceId, MtwCallback*>& t_mtw_callbacks,
-                                             const SyncPolicy& t_sync_policy)
-  : m_mtw_callbacks(t_mtw_callbacks)
-  , m_sync_policy(t_sync_policy)
-  , m_new_full_frame(false)
-  , m_n_synched_frames(0)
-  , m_last_full_packet_id(std::numeric_limits<long>::max())
-  , m_initialized(false)
+hiros::xsens_mtw::Synchronizer::Synchronizer(const std::map<XsDeviceId, MtwCallback*>& mtw_callbacks,
+                                             const SyncPolicy& sync_policy)
+  : mtw_callbacks_(mtw_callbacks)
+  , sync_policy_(sync_policy)
+  , new_full_frame_(false)
+  , n_synched_frames_(0)
+  , last_full_packet_id_(std::numeric_limits<long>::max())
+  , initialized_(false)
 {
-  for (auto& cb : m_mtw_callbacks) {
-    m_buffer.emplace(cb.first, std::deque<std::shared_ptr<XsDataPacket>>());
+  for (auto& cb : mtw_callbacks_) {
+    buffer_.emplace(cb.first, std::deque<std::shared_ptr<XsDataPacket>>());
   }
-  m_frame.reserve(m_buffer.size());
+  frame_.reserve(buffer_.size());
 }
 
 hiros::xsens_mtw::Synchronizer::~Synchronizer() {}
 
-void hiros::xsens_mtw::Synchronizer::add(const std::shared_ptr<XsDataPacket>& t_packet)
+void hiros::xsens_mtw::Synchronizer::add(const std::shared_ptr<XsDataPacket>& packet)
 {
-  m_buffer.at(t_packet->deviceId()).push_back(t_packet);
+  buffer_.at(packet->deviceId()).push_back(packet);
 
-  switch (m_sync_policy) {
+  switch (sync_policy_) {
     case SyncPolicy::fillPartialFrames:
-      fillMissingPackets(t_packet->deviceId());
+      fillMissingPackets(packet->deviceId());
       break;
 
     case SyncPolicy::skipPartialFrames:
@@ -33,121 +33,121 @@ void hiros::xsens_mtw::Synchronizer::add(const std::shared_ptr<XsDataPacket>& t_
   }
 
   if (!newFrameAvailable()) {
-    sync(t_packet);
+    sync(packet);
   }
 }
 
 bool hiros::xsens_mtw::Synchronizer::newFrameAvailable()
 {
-  return (m_frame.size() == m_buffer.size());
+  return (frame_.size() == buffer_.size());
 }
 
 std::vector<std::shared_ptr<XsDataPacket>> hiros::xsens_mtw::Synchronizer::getLatestFrame()
 {
-  return m_frame;
+  return frame_;
 }
 
 void hiros::xsens_mtw::Synchronizer::clearLatestFrame()
 {
-  m_frame.clear();
+  frame_.clear();
 
-  switch (m_sync_policy) {
+  switch (sync_policy_) {
     case SyncPolicy::fillPartialFrames:
-      for (auto& pair : m_buffer) {
+      for (auto& pair : buffer_) {
         long previous_pid = pair.second.front()->packetId();
 
         pair.second.pop_front();
         if (pair.second.front()->packetId() > previous_pid) {
-          m_mtw_callbacks.at(pair.first)->deleteOldestPacket();
+          mtw_callbacks_.at(pair.first)->deleteOldestPacket();
         }
       }
 
-      --m_n_synched_frames;
+      --n_synched_frames_;
       break;
 
     case SyncPolicy::skipPartialFrames:
-      for (auto& pair : m_buffer) {
+      for (auto& pair : buffer_) {
         unsigned long n_packets_to_delete = pair.second.size();
 
         pair.second.clear();
-        m_mtw_callbacks.at(pair.first)->deleteOldestPackets(n_packets_to_delete);
+        mtw_callbacks_.at(pair.first)->deleteOldestPackets(n_packets_to_delete);
       }
       break;
   }
 }
 
-void hiros::xsens_mtw::Synchronizer::fillMissingPackets(const XsDeviceId& t_device_id)
+void hiros::xsens_mtw::Synchronizer::fillMissingPackets(const XsDeviceId& device_id)
 {
-  if (m_buffer.at(t_device_id).size() > 1) {
+  if (buffer_.at(device_id).size() > 1) {
     unsigned long n_packets_to_add =
-      static_cast<unsigned long>(m_buffer.at(t_device_id).rbegin()->get()->packetId()
-                                 - std::next(m_buffer.at(t_device_id).rbegin())->get()->packetId() - 1);
+      static_cast<unsigned long>(buffer_.at(device_id).rbegin()->get()->packetId()
+                                 - std::next(buffer_.at(device_id).rbegin())->get()->packetId() - 1);
 
     if (n_packets_to_add > 0) {
       std::vector<std::shared_ptr<XsDataPacket>> interpolated_packets(n_packets_to_add);
       for (unsigned int i = 0; i < interpolated_packets.size(); ++i) {
-        interpolated_packets.at(i) = utils::interpolate(*std::next(m_buffer.at(t_device_id).rbegin()),
-                                                        m_buffer.at(t_device_id).back(),
+        interpolated_packets.at(i) = utils::interpolate(*std::next(buffer_.at(device_id).rbegin()),
+                                                        buffer_.at(device_id).back(),
                                                         (i + 1) / static_cast<double>(n_packets_to_add + 1));
       }
 
-      m_buffer.at(t_device_id)
-        .insert(std::prev(m_buffer.at(t_device_id).end()), interpolated_packets.begin(), interpolated_packets.end());
+      buffer_.at(device_id).insert(
+        std::prev(buffer_.at(device_id).end()), interpolated_packets.begin(), interpolated_packets.end());
     }
   }
 }
 
-void hiros::xsens_mtw::Synchronizer::sync(std::shared_ptr<XsDataPacket> t_packet)
+void hiros::xsens_mtw::Synchronizer::sync(std::shared_ptr<XsDataPacket> packet)
 {
-  checkNewFullFrame(t_packet);
+  checkNewFullFrame(packet);
 
-  switch (m_sync_policy) {
+  switch (sync_policy_) {
     case SyncPolicy::fillPartialFrames:
-      if (m_new_full_frame) {
+      if (new_full_frame_) {
         restructureBuffer();
       }
 
-      if (m_n_synched_frames > 0) {
+      if (n_synched_frames_ > 0) {
         fillFrame();
       }
       break;
 
     case SyncPolicy::skipPartialFrames:
-      if (m_new_full_frame) {
+      if (new_full_frame_) {
         fillFrame();
       }
       break;
   }
 }
 
-void hiros::xsens_mtw::Synchronizer::checkNewFullFrame(std::shared_ptr<XsDataPacket> t_packet)
+void hiros::xsens_mtw::Synchronizer::checkNewFullFrame(std::shared_ptr<XsDataPacket> packet)
 {
-  if (!m_initialized) {
-    for (auto& pair : m_buffer) {
+  if (!initialized_) {
+    for (auto& pair : buffer_) {
       if (!pair.second.empty()) {
-        m_last_full_packet_id = std::min(m_last_full_packet_id, pair.second.front()->packetId() - 1);
+        last_full_packet_id_ = std::min(last_full_packet_id_, pair.second.front()->packetId() - 1);
       }
     }
   }
 
-  m_new_full_frame = false;
-  for (long pid = m_last_full_packet_id + 1; pid <= t_packet->packetId(); ++pid) {
+  new_full_frame_ = false;
+  for (long pid = last_full_packet_id_ + 1; pid <= packet->packetId(); ++pid) {
     if (isFullFrame(pid)) {
-      m_new_full_frame = true;
-      m_last_full_packet_id = pid;
+      new_full_frame_ = true;
+      last_full_packet_id_ = pid;
       break;
     }
   }
 
-  if (!m_initialized && m_new_full_frame) {
+  if (!initialized_ && new_full_frame_) {
     clearInitialPackets();
-    m_initialized = true;
+    initialized_ = true;
   }
 }
 
 void hiros::xsens_mtw::Synchronizer::restructureBuffer()
 {
-  auto n_rows = std::min_element(m_buffer.begin(), m_buffer.end(), [](const auto& lhs, const auto& rhs) {
+  auto n_rows = std::min_element(buffer_.begin(), buffer_.end(), [](const auto& lhs, const auto& rhs) {
                   return lhs.second.size() < rhs.second.size();
                 })->second.size();
 
@@ -157,42 +157,42 @@ void hiros::xsens_mtw::Synchronizer::restructureBuffer()
     }
   }
 
-  m_n_synched_frames = m_buffer.begin()->second.size() - 1;
+  n_synched_frames_ = buffer_.begin()->second.size() - 1;
 }
 
 void hiros::xsens_mtw::Synchronizer::fillFrame()
 {
-  m_frame.clear();
+  frame_.clear();
 
-  for (auto& pair : m_buffer) {
-    switch (m_sync_policy) {
+  for (auto& pair : buffer_) {
+    switch (sync_policy_) {
       case SyncPolicy::fillPartialFrames:
         if (pair.second.size() > 1) {
-          m_frame.push_back(pair.second.at(1));
+          frame_.push_back(pair.second.at(1));
         }
         break;
 
       case SyncPolicy::skipPartialFrames:
-        m_frame.push_back(pair.second.back());
+        frame_.push_back(pair.second.back());
         break;
     }
   }
 }
 
-bool hiros::xsens_mtw::Synchronizer::isFullFrame(const long& t_packet_id)
+bool hiros::xsens_mtw::Synchronizer::isFullFrame(const long& packet_id)
 {
-  for (auto& pair : m_buffer) {
-    if (!containsPacket(pair.first, t_packet_id)) {
+  for (auto& pair : buffer_) {
+    if (!containsPacket(pair.first, packet_id)) {
       return false;
     }
   }
   return true;
 }
 
-bool hiros::xsens_mtw::Synchronizer::containsPacket(const XsDeviceId& t_device_id, const long& t_packet_id)
+bool hiros::xsens_mtw::Synchronizer::containsPacket(const XsDeviceId& device_id, const long& packet_id)
 {
-  for (auto it = m_buffer.at(t_device_id).rbegin(); it < m_buffer.at(t_device_id).rend(); ++it) {
-    if (it->get()->packetId() == t_packet_id) {
+  for (auto it = buffer_.at(device_id).rbegin(); it < buffer_.at(device_id).rend(); ++it) {
+    if (it->get()->packetId() == packet_id) {
       return true;
     }
   }
@@ -200,30 +200,30 @@ bool hiros::xsens_mtw::Synchronizer::containsPacket(const XsDeviceId& t_device_i
   return false;
 }
 
-bool hiros::xsens_mtw::Synchronizer::isDoubleRow(const unsigned long& t_row)
+bool hiros::xsens_mtw::Synchronizer::isDoubleRow(const unsigned long& row)
 {
-  for (auto& pair : m_buffer) {
-    if (pair.second.size() <= t_row + 1 || pair.second.at(t_row + 1)->packetId() > pair.second.at(t_row)->packetId()) {
+  for (auto& pair : buffer_) {
+    if (pair.second.size() <= row + 1 || pair.second.at(row + 1)->packetId() > pair.second.at(row)->packetId()) {
       return false;
     }
   }
   return true;
 }
 
-void hiros::xsens_mtw::Synchronizer::eraseRow(const unsigned long& t_row)
+void hiros::xsens_mtw::Synchronizer::eraseRow(const unsigned long& row)
 {
-  for (auto& pair : m_buffer) {
-    pair.second.erase(pair.second.begin() + static_cast<long>(t_row));
+  for (auto& pair : buffer_) {
+    pair.second.erase(pair.second.begin() + static_cast<long>(row));
   }
 }
 
 void hiros::xsens_mtw::Synchronizer::clearInitialPackets()
 {
-  for (auto& pair : m_buffer) {
+  for (auto& pair : buffer_) {
     for (auto& packet : pair.second) {
-      if (packet->packetId() < m_last_full_packet_id) {
+      if (packet->packetId() < last_full_packet_id_) {
         pair.second.pop_front();
-        m_mtw_callbacks.at(pair.first)->deleteOldestPacket();
+        mtw_callbacks_.at(pair.first)->deleteOldestPacket();
       }
     }
   }

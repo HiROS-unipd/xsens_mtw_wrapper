@@ -18,7 +18,7 @@ namespace hiros {
     class MtwCallback : public XsCallback
     {
     public:
-      MtwCallback(int t_mtw_index, XsDevice* t_device);
+      MtwCallback(int mtw_index, XsDevice* device);
 
       bool dataAvailable() const;
       bool newDataAvailable();
@@ -26,22 +26,22 @@ namespace hiros {
       std::shared_ptr<XsDataPacket> getLatestPacket();
 
       void deleteOldestPacket();
-      void deleteOldestPackets(const unsigned long& t_n_packets);
+      void deleteOldestPackets(const unsigned long& n_packets);
 
-      inline int getMtwIndex() const { return m_mtw_index; }
+      inline int getMtwIndex() const { return mtw_index_; }
       XsDevice const& device() const;
 
     protected:
-      virtual void onLiveDataAvailable(XsDevice* t_device, const XsDataPacket* t_packet);
+      virtual void onLiveDataAvailable(XsDevice* device, const XsDataPacket* packet);
 
     private:
-      const unsigned long m_max_buffer_size = 300;
+      const unsigned long max_buffer_size_ = 300;
 
-      mutable XsMutex m_mutex;
-      std::deque<XsDataPacket> m_packet_buffer;
-      int m_read_packets;
-      int m_mtw_index;
-      XsDevice* m_device;
+      mutable XsMutex mutex_;
+      std::deque<XsDataPacket> packet_buffer_;
+      int read_packets_;
+      int mtw_index_;
+      XsDevice* device_;
     };
 
   } // namespace xsens_mtw

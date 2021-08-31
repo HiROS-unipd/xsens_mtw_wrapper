@@ -26,40 +26,40 @@ namespace hiros {
         skipPartialFrames
       };
 
-      Synchronizer(const std::map<XsDeviceId, MtwCallback*>& t_mtw_callbacks,
-                   const SyncPolicy& t_sync_policy = SyncPolicy::skipPartialFrames);
+      Synchronizer(const std::map<XsDeviceId, MtwCallback*>& mtw_callbacks,
+                   const SyncPolicy& sync_policy = SyncPolicy::skipPartialFrames);
       virtual ~Synchronizer();
 
-      void add(const std::shared_ptr<XsDataPacket>& t_packet);
+      void add(const std::shared_ptr<XsDataPacket>& packet);
       bool newFrameAvailable();
       std::vector<std::shared_ptr<XsDataPacket>> getLatestFrame();
       void clearLatestFrame();
 
     private:
-      void fillMissingPackets(const XsDeviceId& t_device_id);
-      void sync(std::shared_ptr<XsDataPacket> t_packet);
+      void fillMissingPackets(const XsDeviceId& device_id);
+      void sync(std::shared_ptr<XsDataPacket> packet);
 
-      void checkNewFullFrame(std::shared_ptr<XsDataPacket> t_packet);
+      void checkNewFullFrame(std::shared_ptr<XsDataPacket> packet);
       void restructureBuffer();
       void fillFrame();
 
-      bool isFullFrame(const long& t_packet_id);
-      bool containsPacket(const XsDeviceId& t_device_id, const long& t_packet_id);
-      bool isDoubleRow(const unsigned long& t_row);
-      void eraseRow(const unsigned long& t_row);
+      bool isFullFrame(const long& packet_id);
+      bool containsPacket(const XsDeviceId& device_id, const long& packet_id);
+      bool isDoubleRow(const unsigned long& row);
+      void eraseRow(const unsigned long& row);
       void clearInitialPackets();
 
-      const std::map<XsDeviceId, MtwCallback*>& m_mtw_callbacks;
-      SyncPolicy m_sync_policy;
+      const std::map<XsDeviceId, MtwCallback*>& mtw_callbacks_;
+      SyncPolicy sync_policy_;
 
-      bool m_new_full_frame;
-      unsigned long m_n_synched_frames;
+      bool new_full_frame_;
+      unsigned long n_synched_frames_;
 
-      long m_last_full_packet_id;
-      bool m_initialized;
+      long last_full_packet_id_;
+      bool initialized_;
 
-      std::map<XsDeviceId, std::deque<std::shared_ptr<XsDataPacket>>> m_buffer;
-      std::vector<std::shared_ptr<XsDataPacket>> m_frame;
+      std::map<XsDeviceId, std::deque<std::shared_ptr<XsDataPacket>>> buffer_;
+      std::vector<std::shared_ptr<XsDataPacket>> frame_;
     };
 
   } // namespace xsens_mtw
