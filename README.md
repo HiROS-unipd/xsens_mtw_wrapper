@@ -26,16 +26,24 @@ Contains an example on how to set some parameters of choice
 | `enable_custom_labeling`    | Set if custom labels should be assigned to the trackers. The custom labels can be defined in file [sensor\_labels.yaml](https://github.com/HiROS-unipd/xsens_mtw_wrapper/blob/master/config/sensor_labels.yaml) |
 | `enable_external_sync`      | Set if the Awinda station's synchronization ports are being used |
 | `publish_only_recording`    | Set if messages should be published only while in <em>Recording</em> state |
-| `synchronize`               | Set if data should be synchronized                           |
+| `synchronize`               | Set if data among different trackers should be synchronized  |
 | `sync_policy`               | Set the synchronization policy (`fillPartialFrames` or `skipPartialFrames`) |
 | `publish_mimu_array`        | Set if a single topic containing all the sensor readings should be published or if a series of topics for each sensor should be published |
-| `publish_imu`               | Set if the IMU data (accelerometer, magnetometer, and orientation as quaternion) should be published |
+| `publish_imu`               | Set if the IMU data (accelerometer, gyroscope, and orientation as quaternion) should be published |
 | `publish_mag`               | Set if the magnetometer data should be published             |
 | `publish_euler`             | Set if the orientation as Euler angles (roll, pitch, yaw) should be published |
 | `publish_free_acceleration` | Set if the free acceleration should be published             |
 | `publish_pressure`          | Set if the pressure should be published                      |
 | `publish_tf`                | Set if the orientation as ROS transform should be published  |
 
+## Published topics
+- **/mimu/data**: array of MIMU messages (where each MIMU message contains a *sensor_msgs/Imu* and a *sensor_msgs/MagneticField*)
+- **/imu/data**: orientation, angular velocity, linear acceleration
+- **/imu/mag**: magnetic field
+- **/imu/euler**: orientation expressed as Euler angles (roll, pitch, yaw)
+- **/filter/free_acceleration**: free acceleration
+- **/pressure**: pressure
+- **/tf**: orientation of each IMU expressed as tf
 
 ## Usage
 ```
@@ -55,6 +63,17 @@ rosservice call /xsens_mtw/reset_orientation "sensors: ['00B44BFF','00B44C00']"
 To reset the orientation of all IMUs:
 ```
 rosservice call /xsens_mtw/reset_orientation "sensors: []"
+```
+
+## Start/stop recording
+To start recording:
+```
+rosservice call /xsens_mtw/start_recording "{}"
+```
+
+To stop recording:
+```
+rosservice call /xsens_mtw/stop_recording "{}"
 ```
 
 ## Using this driver
